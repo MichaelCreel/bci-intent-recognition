@@ -21,3 +21,12 @@ Tests ensure that your environment is set up and functioning correctly
     ```bash
     python3 ./tests/env_test.py
     ```
+- `moabb_test.py` attempts to import a dataset from MOABB to ensure that datasets can be loaded and used in the environment.
+    ```bash
+    python3 ./tests/moabb_test.py
+    ```
+
+- `eegnet_test.py` attempts to utilize an EEGNet model to ensure that EEGNet models can be used in the environment.
+    ```bash
+    python3 ./tests/eegnet_test.py
+    ```
