@@ -5,6 +5,6 @@ I set up the development environment by creating both the file structure and Pyt
 
 ### Files
 
-- eegnet_test.py
-- env_test.py
-- moabb_test.py
+- tests/eegnet_test.py
+- tests/env_test.py
+- tests/moabb_test.py
