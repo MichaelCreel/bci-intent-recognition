@@ -30,3 +30,10 @@ Tests ensure that your environment is set up and functioning correctly
     ```bash
     python3 ./tests/eegnet_test.py
     ```
+
+## Notebooks
+
+- `physionet_data.py` loads the PhysioNet movement dataset and plots, filters, and processes data for visualization. It is a clear demonstration of why artificial intelligence should be used to read EEG data, as the datasets and epochs are essentially unintelligable.
+    ```bash
+    python3 ./notebooks/week_2/physionet_data.py
+    ```
