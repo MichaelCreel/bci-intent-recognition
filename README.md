@@ -33,7 +33,11 @@ Tests ensure that your environment is set up and functioning correctly
 
 ## Notebooks
 
-- `physionet_data.py` loads the PhysioNet movement dataset and plots, filters, and processes data for visualization. It is a clear demonstration of why artificial intelligence should be used to read EEG data, as the datasets and epochs are essentially unintelligable.
+- (Week 2) `physionet_data.py` loads the PhysioNet movement dataset and plots, filters, and processes data for visualization. It is a clear demonstration of why artificial intelligence should be used to read EEG data, as the datasets and epochs are essentially unintelligable.
     ```bash
     python3 ./notebooks/week_2/physionet_data.py
+    ```
+- (Week 3) `csp_lda_competition.py` implements a CSP + LDA classification pipeline for left vs right hand motor imagery using raw EEG motor imagery data from Physionet. The program measures the accuracy of the pipeline using the provided data.
+    ```bash
+    python3 ./notebooks/week_3/csp_lda_competition.py
     ```
