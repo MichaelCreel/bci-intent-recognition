@@ -54,4 +54,16 @@ raw.plot_psd(fmax = 40)
 raw_hp = raw.copy().filter(1., None)
 raw_hp.plot_psd(fmax = 40)
 
+# Retrieve PSD for left and right hands
+epochs_left = epochs['left_hand']
+epochs_right = epochs['right_hand']
+
+# Plot C3 PSDs for left and right hand
+epochs_left.plot_psd(picks="C3", fmax=40)
+epochs_right.plot_psd(picks="C3", fmax=40)
+
+# Plot C4 PSDs for left and right hand
+epochs_left.plot_psd(picks="C4", fmax=40)
+epochs_right.plot_psd(picks="C4", fmax=40)
+
 mne.viz.utils.plt_show()
