@@ -15,7 +15,7 @@ from sklearn.pipeline import Pipeline
 # Initialize data for subject 1
 runs = [3, 4, 7, 8] # Left hand: runs 3 and 7, Right hand: runs 4 and 8; 7 and 8 are imagined movements
 files = eegbci.load_data(1, runs=runs) # Subject 1
-raws = [mne.io.read_raw_edf(f, preload=True) for f in files]
+raws = [read_raw_edf(f, preload=True) for f in files]
 raw = mne.concatenate_raws(raws)
 
 # Filter Data between 8 and 30 Hz
