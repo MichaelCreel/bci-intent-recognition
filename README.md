@@ -41,3 +41,13 @@ Tests ensure that your environment is set up and functioning correctly
     ```bash
     python3 ./notebooks/week_3/csp_lda_competition.py
     ```
+
+- `single_subject_eegnet.py` trains EEGNet models on individual subjects for left vs right hand motor imagery using EEG motor imagery data from the PhysioNet Motor Imagery dataset. The program then evaluates the accuracy of the model and plots the confusion matricies.
+    ```bash
+    python3 ./notebooks/week_3/single_subject_eegnet.py
+    ```
+
+- `cross_subject_eegnet.py` trains EEGNet models on multiple subjects for left vs right hand motor imagery using EEG motor imagery data from the PhysioNet Motor Imagery dataset. The program then evaluates the accuracy of the model and plots the confusion matricies.
+    ```bash
+    python3 ./notebooks/week_4/cross_subject_eegnet.py
+    ```
