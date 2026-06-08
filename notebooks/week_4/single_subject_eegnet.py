@@ -62,3 +62,86 @@ def load_subject(subject, runs = [3, 4, 7, 8]):
     y = labels.astype(int)
 
     return X, y
+
+# Trains EEGNet on a single subject and evaluates performance
+# Returns the accuracy of the model and the confusion matrix
+def train_eegnet(subject):
+    print(f"Training EEGNet on subject {subject}...")
+
+    X, y = load_subject(subject)
+
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size = 0.2, shuffle = True, stratify = y
+    )
+
+    # Convert to PyTorch tensors
+    train_data = data.TensorDataset(
+        torch.tensor(X_train, dtype=torch.float32),
+        torch.tensor(y_train, dtype=torch.long)
+    )
+    test_data = data.TensorDataset(
+        torch.tensor(X_test, dtype=torch.float32),
+        torch.tensor(y_test, dtype=torch.long)
+    )
+
+    train_loader = data.Dataloader(train_data, batch_size = 32, shuffle = True)
+    test_loader = data.DataLoader(test_data, batch_size = 32)
+
+    # Create EEGNet model
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = EEGNet(
+        n_chans = X.shape[1],
+        n_outputs = 2,
+        n_times = X.shape[2]
+    ).to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3)
+    criterion = nn.CrossEntropyLoss()
+
+    # Train model
+    epochs = 40
+    for epoch in range(epochs):
+        model.train()
+        for xb, yb in train_loader:
+            xb, yb = xb.to(device), yb.to(device)
+            optimizer.zero_grad()
+            preds = model(xb)
+            loss = criterion(preds, yb)
+            loss.backward()
+            optimizer.step()
+    
+    # Evaluate model
+    model.eval()
+    correct = 0
+    total = 0
+    preds_all = []
+    labels_all = []
+
+    with torch.no_grad():
+        for xb, yb in test_loader:
+            xb, yb = xb.to(device), yb.to(device)
+            preds = model(xb)
+            predicted = preds.argmax(dim = 1)
+            correct += (predicted == yb).sum().item()
+            total += yb.size(0)
+
+            preds_all.extend(predicted.cpu().numpy())
+            labels_all.extend(yb.cpu().numpy())
+    
+    accuracy = correct / total
+    print(f"Subject {subject} - Test Accuracy: {accuracy:.2f}")
+
+    # Confusion matrix
+    cm = confusion_matrix(labels_all, preds_all)
+    print("Confusion Matrix:")
+    print(cm)
+
+    plt.imshow(cm, cmap = "Blues")
+    plt.title(f"Subject {subject} - Confusion Matrix")
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.colorbar()
+    plt.show()
+
+    return accuracy, cm
