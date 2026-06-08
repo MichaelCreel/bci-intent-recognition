@@ -36,13 +36,15 @@ def load_subject(subject, runs = [3, 4, 7, 8]):
     filtered.set_annotations(filtered.annotations.rename(mapping))
     events, event_id = mne.events_from_annotations(filtered)
 
+    print(f">>>EVENTS: {event_id}")
+
     # Create epochs
     epochs = mne.Epochs(
         filtered,
         events,
         event_id = event_id,
-        tmin = 0,
-        tmax = 4,
+        tmin = 2,
+        tmax = 6,
         baseline = None,
         preload = True
     )
@@ -60,6 +62,8 @@ def load_subject(subject, runs = [3, 4, 7, 8]):
 
     X = epochs_lr.get_data()
     y = labels.astype(int)
+
+    print(f">>>SHAPE: {X.shape}")
 
     return X, y
 
@@ -137,17 +141,25 @@ def train_eegnet(subject):
     print("Confusion Matrix:")
     print(cm)
 
-    plt.imshow(cm, cmap = "Blues")
-    plt.title(f"Subject {subject} - Confusion Matrix")
-    plt.xlabel("Predicted")
-    plt.ylabel("True")
-    plt.colorbar()
-    plt.show()
-
     return accuracy, cm
 
 subjects = [1, 2, 3]
+accuracys = []
+confusion_matrices = []
 
 if __name__ == "__main__":
     for subject in subjects:
-        train_eegnet(subject = subject)
+        accuracy, cm = train_eegnet(subject = subject)
+        accuracys.append(accuracy)
+        confusion_matrices.append(cm)
+    
+    print("Accuracies:", accuracys)
+    print("Average Accuracy:", np.mean(accuracys))
+
+    for matrix in confusion_matrices:
+        plt.imshow(matrix, cmap = "Blues")
+        plt.title(f"Confusion Matrix")
+        plt.xlabel("Predicted")
+        plt.ylabel("True")
+        plt.colorbar()
+        plt.show()
