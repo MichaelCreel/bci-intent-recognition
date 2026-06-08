@@ -135,7 +135,7 @@ def train_eegnet(subjects, n_epochs = 40, batch_size = 32, lr = 1e-3):
 generated_figs = []
 
 if __name__ == "__main__":
-    subjects = [1, 2, 3]
+    subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     
     accuracys, cms = train_eegnet(subjects = subjects)
 

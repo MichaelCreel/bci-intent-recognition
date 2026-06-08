@@ -117,7 +117,7 @@ def train_eegnet(subject, n_epochs = 40, batch_size = 32, lr = 1e-3):
 
     return accuracy, cm
 
-subjects = [1, 2, 3]
+subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 accuracys = []
 confusion_matrices = []
 generated_figs = []
