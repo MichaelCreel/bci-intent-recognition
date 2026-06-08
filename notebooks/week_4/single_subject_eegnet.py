@@ -17,8 +17,8 @@ from moabb.paradigms import MotorImagery
 # Runs 3 and 7 are left hand, runs 4 and 8 are right hand
 # Runs 7 and 8 are imagined movements
 # Filters data between 8 and 30 Hz
-def load_subject(subject, runs = [3, 4, 7, 8]):
-    print(f"Loading runs {runs} for subject {subject}...")
+def load_subject(subject):
+    print(f"Loading subject {subject}...")
 
     dataset = PhysionetMI()
     paradigm = MotorImagery(
@@ -140,5 +140,5 @@ if __name__ == "__main__":
         plt.show(block = False)
         plt.savefig(f"figs/week_4/single_subject_eegnet_cm_subject_{subject}.png")
         generated_figs.append(f"single_subject_eegnet_cm_subject_{subject}.png")
-        with open("figs/week_4/generated_figs.txt", "w") as f:
+        with open("figs/week_4/single_subject_generated_figs.txt", "w") as f:
             f.write("\n".join(generated_figs))
