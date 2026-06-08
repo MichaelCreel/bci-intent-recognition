@@ -85,7 +85,7 @@ def train_eegnet(subject):
         torch.tensor(y_test, dtype=torch.long)
     )
 
-    train_loader = data.Dataloader(train_data, batch_size = 32, shuffle = True)
+    train_loader = data.DataLoader(train_data, batch_size = 32, shuffle = True)
     test_loader = data.DataLoader(test_data, batch_size = 32)
 
     # Create EEGNet model
@@ -145,3 +145,9 @@ def train_eegnet(subject):
     plt.show()
 
     return accuracy, cm
+
+subjects = [1, 2, 3]
+
+if __name__ == "__main__":
+    for subject in subjects:
+        train_eegnet(subject = subject)
