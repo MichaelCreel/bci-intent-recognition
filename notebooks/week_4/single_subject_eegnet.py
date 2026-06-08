@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
     for subject, matrix in confusion_matrices:
         plt.imshow(matrix, cmap = "Blues")
-        plt.title(f"Confusion Matrix")
+        plt.title(f"Single SubjectConfusion Matrix - Subject {subject}")
         plt.xlabel("Predicted")
         plt.ylabel("True")
         plt.colorbar()
