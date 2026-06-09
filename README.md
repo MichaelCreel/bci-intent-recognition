@@ -33,26 +33,19 @@ Tests ensure that your environment is set up and functioning correctly
 
 ## Notebooks
 
-- `physionet_data.py` loads the PhysioNet movement dataset and plots, filters, and processes data for visualization. It is a clear demonstration of why artificial intelligence should be used to read EEG data, as the datasets and epochs are essentially unintelligable.
-    ```bash
-    python3 ./notebooks/week_2/physionet_data.py
-    ```
-- `csp_lda_competition.py` implements a CSP + LDA classification pipeline for left vs right hand motor imagery using raw EEG motor imagery data from Physionet. The program measures the accuracy of the pipeline using the provided data.
-    ```bash
-    python3 ./notebooks/week_3/csp_lda_competition.py
-    ```
+Notebooks are scripts that practice using datasets, models, and pipelines to learn valuable information about the data and models. This information will be used to determine and design the best final model and pipeline for the project.
 
-- `moabb_csp_lda_competition.py` implements a CSP + LDA classification pipeline for left vs right hand motor imagery using the MOABB dataset. The program determines the accuracy of the pipeline using the provided data.
-    ```bash
-    python3 ./notebooks/week_3/moabb_csp_lda_competition.py
-    ```
+## Notes
 
-- `single_subject_eegnet.py` trains EEGNet models on individual subjects for left vs right hand motor imagery using EEG motor imagery data from the PhysioNet Motor Imagery dataset. The program then evaluates the accuracy of the model and plots the confusion matricies.
+All commands are written in Bash and should work natively on Linux and MacOS.
     ```bash
-    python3 ./notebooks/week_3/single_subject_eegnet.py
+    python3 ./example_script.py
     ```
-
-- `cross_subject_eegnet.py` trains EEGNet models on multiple subjects for left vs right hand motor imagery using EEG motor imagery data from the PhysioNet Motor Imagery dataset. The program then evaluates the accuracy of the model and plots the confusion matricies.
+Windows users will need to use a bash terminal emulator such as [Git Bash](https://git-scm.com/install/windows) (automatically installed with Git for Windows) to run the commands. The commands may also need to be modified to run on windows (e.g. using `python` instead of `python3`).
     ```bash
-    python3 ./notebooks/week_4/cross_subject_eegnet.py
+    python ./example_script.py
+    ```
+An alias can be added to the bash emulator to substitute `python3` for `python` to require less modification of the commands.
+    ```bash
+    alias python3=python
     ```
