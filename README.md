@@ -39,18 +39,18 @@ Notebooks are scripts that practice using datasets, models, and pipelines to lea
 
 All commands are written in Bash and should work natively on Linux and MacOS.
 
-    ```bash
-    python3 ./example_script.py
-    ```
+```bash
+python3 ./example_script.py
+```
 
 Windows users will need to use a bash terminal emulator such as [Git Bash](https://git-scm.com/install/windows) (automatically installed with Git for Windows) to run the commands. The commands may also need to be modified to run on windows (e.g. using `python` instead of `python3`).
 
-    ```bash
-    python ./example_script.py
-    ```
+```bash
+python ./example_script.py
+```
 
 An alias can be added to the bash emulator to substitute `python3` for `python` to require less modification of the commands.
 
-    ```bash
-    alias python3=python
-    ```
+```bash
+alias python3=python
+```
