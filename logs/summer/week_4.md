@@ -5,5 +5,5 @@ I implemented EEGNet model training for left vs right hand motor imagery. I trai
 
 ### Files
 
-- notebooks/week_3/single_subject_eegnet.py
+- notebooks/week_4/single_subject_eegnet.py
 - notebooks/week_4/cross_subject_eegnet.py
