@@ -253,12 +253,12 @@ def train_eegnet(subjects, n_epochs = 40, batch_size = 32, lr = 1e-3):
         print(f"Subject {subject}:\n - ECE before scaling: {ece_pre_scale:.4f}\n - ECE after scaling: {ece_after_scale:.4f}")
         
         # append the file names of generated reliability diagrams to the generated_figs.txt file
-        with open("./figs/week_5/generated_figs.txt", "a") as f:
+        with open("./figs/week_5/eegnet_generated_figs.txt", "a") as f:
             f.write(f"figs/week_5/subject_{subject}_reliability_-_before_scaling.png\n")
             f.write(f"figs/week_5/subject_{subject}_reliability_-_after_scaling.png\n")
 
 if __name__ == "__main__":
-    with open("./figs/week_5/generated_figs.txt", "w") as f:
+    with open("./figs/week_5/eegnet_generated_figs.txt", "w") as f:
         f.write("")
 
     subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9]
