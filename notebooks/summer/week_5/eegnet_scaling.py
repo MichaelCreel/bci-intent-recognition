@@ -105,7 +105,7 @@ def reliability_diagram(probs, labels, n_bins = 5, title = "Reliability Diagram 
     plt.ylabel("Accuracy")
     plt.title(title)
     plt.show(block = False)
-    plt.savefig(f"figs/week_5/{title.replace(' ', '_').lower()}.png")
+    plt.savefig(f"figs/week_5/eegnet_{title.replace(' ', '_').lower()}.png")
 
 # Load multiple subjects data
 # Filters data between 8 and 30 Hz
@@ -254,8 +254,8 @@ def train_eegnet(subjects, n_epochs = 40, batch_size = 32, lr = 1e-3):
         
         # append the file names of generated reliability diagrams to the generated_figs.txt file
         with open("./figs/week_5/eegnet_generated_figs.txt", "a") as f:
-            f.write(f"figs/week_5/subject_{subject}_reliability_-_before_scaling.png\n")
-            f.write(f"figs/week_5/subject_{subject}_reliability_-_after_scaling.png\n")
+            f.write(f"figs/week_5/eegnet_subject_{subject}_reliability_-_before_scaling.png\n")
+            f.write(f"figs/week_5/eegnet_subject_{subject}_reliability_-_after_scaling.png\n")
 
 if __name__ == "__main__":
     with open("./figs/week_5/eegnet_generated_figs.txt", "w") as f:
