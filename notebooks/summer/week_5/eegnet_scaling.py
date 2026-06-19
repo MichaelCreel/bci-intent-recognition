@@ -50,6 +50,63 @@ def fit_temperature(model, val_loader, device):
     optimizer.step(eval)
     return scaler
 
+# Compute Expected Calibration Error (ECE)
+def compute_ece(probs, labels, n_bins = 5):
+    confidences = np.max(probs, axis = 1)
+    predictions = np.argmax(probs, axis = 1)
+
+    bins = np.linspace(0, 1, n_bins + 1)
+    ece = 0.0
+
+    for i in range(n_bins):
+        bin_lower = bins[i]
+        bin_upper = bins[i+1]
+
+        in_bin = (confidences > bin_lower) & (confidences <= bin_upper)
+        prop_in_bin = np.mean(in_bin)
+
+        if prop_in_bin > 0:
+            accuracy_in_bin = np.mean(predictions[in_bin] == labels[in_bin])
+            average_confidence_in_bin = np.mean(confidences[in_bin])
+            ece += np.abs(average_confidence_in_bin - accuracy_in_bin) * prop_in_bin
+
+    return ece
+
+# Create reliability diagram
+# Increasing the number of bins will make the diagram more jagged due to data scarcity
+# Increasing the number of bins will also increase the number of empty bins
+def reliability_diagram(probs, labels, n_bins = 5, title = "Reliability Diagram (Improper Title)"):
+    confidences = np.max(probs, axis = 1)
+    predictions = np.argmax(probs, axis = 1)
+
+    bins = np.linspace(0, 1, n_bins + 1)
+    accuracies = []
+    confs = []
+
+    for i in range(n_bins):
+        bin_lower = bins[i]
+        bin_upper = bins[i+1]
+
+        in_bin = (confidences > bin_lower) & (confidences <= bin_upper)
+
+        if np.any(in_bin):
+            accuracies.append(np.mean(predictions[in_bin] == labels[in_bin]))
+            confs.append(np.mean(confidences[in_bin]))
+        # Accounts for empty bins
+        # This can make relability diagrams look odd with jumps to the origin
+        # else:
+        #     accuracies.append(0)
+        #     confs.append(0)
+
+    plt.figure()
+    plt.plot(confs, accuracies, marker = 'o')
+    plt.plot([0, 1], [0, 1], linestyle = '--')
+    plt.xlabel("Confidence")
+    plt.ylabel("Accuracy")
+    plt.title(title)
+    plt.show(block = False)
+    plt.savefig(f"figs/week_5/{title.replace(' ', '_').lower()}.png")
+
 # Load multiple subjects data
 # Filters data between 8 and 30 Hz
 def load_subjects(subjects):
@@ -159,12 +216,19 @@ def train_eegnet(subjects, n_epochs = 40, batch_size = 32, lr = 1e-3):
         preds_all = []
         labels_all = []
         probs_all = []
+        probs_pre_scale_all = []
 
         with torch.no_grad():
             for xb, yb in test_loader:
                 xb, yb = xb.to(device), yb.to(device)
 
                 logits = model(xb)
+
+                # Fill pre-scaling arrays
+                probs_before = torch.softmax(logits, dim = 1)
+                probs_pre_scale_all.extend(probs_before.cpu().numpy())
+
+                # Apply temperature scaling and get probabilities
                 scaled_logits = scaler(logits)
                 probs = torch.softmax(scaled_logits, dim = 1)
 
@@ -174,7 +238,29 @@ def train_eegnet(subjects, n_epochs = 40, batch_size = 32, lr = 1e-3):
                 labels_all.extend(yb.cpu().numpy())
                 probs_all.extend(probs.cpu().numpy())
 
+        ece_pre_scale = compute_ece(np.array(probs_pre_scale_all), np.array(labels_all))
+        ece_after_scale = compute_ece(np.array(probs_all), np.array(labels_all))
+
+        reliability_diagram(
+            np.array(probs_pre_scale_all), np.array(labels_all),
+            title = f"Subject {subject} Reliability - Before Scaling"
+        )
+        reliability_diagram(
+            np.array(probs_all), np.array(labels_all),
+            title = f"Subject {subject} Reliability - After Scaling"
+        )
+
+        print(f"Subject {subject}:\n - ECE before scaling: {ece_pre_scale:.4f}\n - ECE after scaling: {ece_after_scale:.4f}")
+        
+        # append the file names of generated reliability diagrams to the generated_figs.txt file
+        with open("./figs/week_5/generated_figs.txt", "a") as f:
+            f.write(f"figs/week_5/subject_{subject}_reliability_-_before_scaling.png\n")
+            f.write(f"figs/week_5/subject_{subject}_reliability_-_after_scaling.png\n")
+
 if __name__ == "__main__":
+    with open("./figs/week_5/generated_figs.txt", "w") as f:
+        f.write("")
+
     subjects = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-    train_eegnet(subjects)
+    train_eegnet(subjects = subjects)
