@@ -29,3 +29,8 @@
     ```bash
     python3 ./notebooks/summer/week_5/eegnet_scaling.py
     ```
+
+- `csp_lda_scaling.py` trains CSP + LDA pipelines on multiple subjects. Applies temperature scaling to the pipelines and evaluates the expected calibration error and plots relability diagrams for before and after temperature scaling.
+    ```bash
+    python3 ./notebooks/summer/week_5/csp_lda_scaling.py
+    ```
