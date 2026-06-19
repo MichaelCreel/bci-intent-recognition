@@ -24,3 +24,8 @@
     ```bash
     python3 ./notebooks/summer/week_4/cross_subject_eegnet.py
     ```
+
+- `eegnet_scaling.py` trains EEGNet models on multiple subjects in the same way as `cross_subject_eegnet.py`. Applies temperature scaling to the models and evaluates the expected calibration error and plots relability diagrams for before and after temperature scaling.
+    ```bash
+    python3 ./notebooks/summer/week_5/eegnet_scaling.py
+    ```
