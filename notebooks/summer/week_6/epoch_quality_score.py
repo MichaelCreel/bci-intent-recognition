@@ -105,29 +105,55 @@ if __name__ == "__main__":
         fmax = 30
     )
 
-    # Load a single subject to train the classifier model
-    X, y, meta = paradigm.get_data(dataset = dataset, subjects = [3])
-    n_channels = X.shape[1]
-    montage = mne.channels.make_standard_montage('standard_1020')
-    channel_names = montage.ch_names[:n_channels]
-    info = mne.create_info(
-        ch_names = channel_names,
-        sfreq = 250.0,
-        ch_types = 'eeg'
+    training_subjects = [1, 2, 3]
+    testing_subjects = [8, 9]
+
+    # Load training subjects
+    X_train, y_train, meta_train = paradigm.get_data(
+        dataset = dataset,
+        subjects = training_subjects
     )
-    info.set_montage(montage)
-    epochs = mne.EpochsArray(X, info)
+
+    n_channels = X_train.shape[1]
+
+    # Build montage
+    montage = mne.channels.make_standard_montage("standard_1020")
+    channel_names = montage.ch_names[:n_channels]
+
+    # Create info
+    info_train = mne.create_info(
+        ch_names = channel_names,
+        sfreq = 250,
+        ch_types = "eeg"
+    )
+    info_train.set_montage(montage)
+
+    epochs_train = mne.EpochsArray(X_train, info_train)
 
     # Build dataset
-    X_feats, y_labels = build_dataset(epochs)
-
-    print(">>>>Unique labels:", np.unique(y_labels, return_counts=True))
+    X_features, y_labels = build_dataset(epochs_train)
+    print("Unique labels:", np.unique(y_labels, return_counts = True))
 
     # Train classifier
-    clf = train_classifier(X_feats, y_labels)
+    clf = train_classifier(X_features, y_labels)
 
-    # Test on a new epoch
-    test_epoch = epochs.get_data()[0]
-    score = compute_quality_score(test_epoch, epochs.info['sfreq'], clf)
+    # Load testing subjects
+    X_test, y_test, meta_test = paradigm.get_data(
+        dataset = dataset,
+        subjects = testing_subjects
+    )
+
+    info_test = mne.create_info(
+        ch_names = channel_names,
+        sfreq = 250,
+        ch_types = "eeg"
+    )
+    info_test.set_montage(montage)
+
+    epochs_test = mne.EpochsArray(X_test, info_test)
+
+    # Compute quality score
+    test_epoch = epochs_test.get_data()[0]
+    score = compute_quality_score(test_epoch, epochs_test.info["sfreq"], clf)
 
     print(f"Epoch quality score: {score:.4f}")
