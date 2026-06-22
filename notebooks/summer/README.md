@@ -34,3 +34,8 @@
     ```bash
     python3 ./notebooks/summer/week_5/csp_lda_scaling.py
     ```
+
+- `epoch_quality_score.py` trains a random forest classifier to determine the quality of epochs and mark them as good or bad. This script includes testing for the classifier, but the methods can be used to create a final quality score classifier.
+    ```bash
+    python3 ./notebooks/summer/week_6/epoch_quality_score.py
+    ```
