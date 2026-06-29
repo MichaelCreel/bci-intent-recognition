@@ -52,7 +52,6 @@ class EEGNet_Model:
         self.model = EEGNet(
             n_chans = n_chans,
             n_times = n_times,
-            n_classes = n_classes,
             n_outputs = n_classes,
         ).to(self.device)
 
@@ -98,16 +97,17 @@ class EEGNet_Model:
     def predict_proba(self, epoch_data):
         x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0).to(self.device)
 
-        logits = self.model(x)
+        with torch.no_grad():
+            logits = self.model(x)
 
-        # Temperature scaling
-        if self.scaler is not None:
-            logits = self.scaler(logits)
+            # Temperature scaling
+            if self.scaler is not None:
+                logits = self.scaler(logits)
 
-        # Softmax
-        probs = torch.softmax(logits, dim = 1)
-        return float(probs[0, 1].cpu().numpy())
-    
+            # Softmax
+            probs = torch.softmax(logits, dim = 1)
+        return float(probs[0, 1].item())
+
     def save(self, path):
         torch.save({
             "model_state": self.model.state_dict(),
