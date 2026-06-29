@@ -81,7 +81,7 @@ class QualityModel:
         self.clf.fit(X, y)
 
     def predict_quality(self, epoch_data, sfreq):
-        features = extract_features(epoch_data, sfreq)
+        features = extract_features(epoch_data, sfreq).reshape(1, -1)
         score = self.clf.predict_proba(features)[0, 1]
         return float(score)
     
