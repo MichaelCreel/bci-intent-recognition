@@ -8,19 +8,34 @@ import mne
 from moabb.datasets import BNCI2014_001
 from moabb.paradigms import MotorImagery
 
+import sys
+import os
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+sys.path.append(PROJECT_ROOT)
+
+# Intent Models
+from models.csp_lda import CSP_LDA_Model
+from models.eegnet import EEGNet_Model
+
+# Quality Model
+from models.epoch_scorer import QualityModel
+
 # Pre-load the model for intent classification
-def load_intent_model():
-    class IntentModel:
-        def predict_proba(self, epoch_data):
-            # epoch_data is shape (n_channels, n_times)
-            return 0.8 # placeholder confidence score
-    return IntentModel()
+# Use "csp" for CSP + LDA or "eegnet" for EEGNet
+# Defaults to CSP + LDA
+def load_intent_model(model_type = "csp", n_chans = None, n_times = None):
+    if model_type == "csp":
+        return CSP_LDA_Model(n_components = 6)
+    elif model_type == "eegnet":
+        if n_chans is None or n_times is None:
+            raise ValueError("n_chans and n_times must be specified for EEGNet model.")
+        return EEGNet_Model(n_chans = n_chans, n_times = n_times)
+    else:
+        raise ValueError(f"Invalid model type: {model_type}")
 
 # Pre-load the model for quality classification
 def load_quality_model():
-    class QualityModel:
-        def compute_quality_score(self, epoch_data, sfreq):
-            return 0.9 # placeholder quality score
     return QualityModel()
 
 # Compute temporal stability between 0 and 1
@@ -94,65 +109,96 @@ def should_execute_command(safety_score, threshold = 0.75):
 def build_epochs_for_subject(subject_id):
     dataset = BNCI2014_001()
     paradigm = MotorImagery(
-        n_classes = 2,
-        events = ['left_hand', 'right_hand'],
-        fmin = 8,
-        fmax = 30
+        n_classes=2,
+        events=['left_hand', 'right_hand'],
+        fmin=8,
+        fmax=30
     )
 
-    X, y, meta = paradigm.get_data(dataset = dataset, subjects = [subject_id])
+    X, y, meta = paradigm.get_data(dataset=dataset, subjects=[subject_id])
+
+    # Convert string labels to integer labels
+    classes, y_int = np.unique(y, return_inverse=True)
+
     n_channels = X.shape[1]
 
     montage = mne.channels.make_standard_montage("standard_1020")
     channel_names = montage.ch_names[:n_channels]
 
     info = mne.create_info(
-        ch_names = channel_names,
-        sfreq = 250,
-        ch_types = "eeg"
+        ch_names=channel_names,
+        sfreq=250,
+        ch_types="eeg"
     )
     info.set_montage(montage)
-    
+
     epochs = mne.EpochsArray(X, info)
-    return epochs
+    return epochs, y_int
 
 if __name__ == "__main__":
     training_subjects = [1, 3, 7]
     testing_subject = 4
 
+    # Ask user which intent model to use
+    model_choice = input("Choose intent model [csp/eegnet]: ").strip().lower()
+    if model_choice not in ["csp", "eegnet"]:
+        raise ValueError("Invalid choice. Must be 'csp' or 'eegnet'.")
+
     print("Loading training subjects...")
     train_epochs_list = []
+    train_labels_list = []
 
     for subj in training_subjects:
-        epochs = build_epochs_for_subject(subj)
+        epochs, y = build_epochs_for_subject(subj)
         train_epochs_list.append(epochs)
-    
+        train_labels_list.append(y)
+
+    # Combine training data
     epochs_train = mne.concatenate_epochs(train_epochs_list)
-    sfreq = epochs_train.info['sfreq']
+    y_train = np.concatenate(train_labels_list)
+    sfreq = epochs_train.info["sfreq"]
 
-    # Train intent classifier
-    print("Training intent classifier...")
-    intent_model = load_intent_model()
-    # Call training here
+    # Train intent model
+    print(f"Training intent model ({model_choice})...")
 
-    # Train quality classifier
-    print("Training quality classifier...")
-    quality_model = load_quality_model()
-    # Call training here
+    if model_choice == "csp":
+        intent_model = CSP_LDA_Model(n_components=6)
+        intent_model.fit(epochs_train.get_data(), y_train)
+
+    elif model_choice == "eegnet":
+        n_chans = epochs_train.get_data().shape[1]
+        n_times = epochs_train.get_data().shape[2]
+
+        intent_model = EEGNet_Model(n_chans=n_chans, n_times=n_times)
+        intent_model.fit(epochs_train.get_data(), y_train)
+
+    # Train quality model
+    print("Training quality model...")
+    quality_model = QualityModel()
+
+    from models.epoch_scorer import build_dataset
+    X_features, y_labels = build_dataset(epochs_train)
+    quality_model.fit(X_features, y_labels)
 
     # Load testing subject
     print("Loading testing subject...")
-    epochs_test = build_epochs_for_subject(testing_subject)
-    sfreq = epochs_test.info['sfreq']
+    epochs_test, y_test = build_epochs_for_subject(testing_subject)
+    sfreq_test = epochs_test.info["sfreq"]
 
-    intent_conf_history = deque(maxlen = 5)
+    intent_conf_history = deque(maxlen=5)
+
+    intent_scores = []
+    quality_scores = []
+    stability_scores = []
+    safety_scores = []
+    execute_decisions = []
 
     print("Simulating safety score calculation...")
     for i in range(len(epochs_test)):
-        epoch_data = epochs_test.get_data()[i] 
+        epoch_data = epochs_test.get_data()[i]
 
         intent_confidence = intent_model.predict_proba(epoch_data)
-        quality_score = quality_model.compute_quality_score(epoch_data, sfreq)
+        quality_score = quality_model.predict_quality(epoch_data, sfreq_test)
 
         intent_conf_history.append(intent_confidence)
         stability = compute_temporal_stability(intent_conf_history)
@@ -161,16 +207,32 @@ if __name__ == "__main__":
             intent_confidence,
             quality_score,
             stability,
-            mode = "min"
+            mode="min"
         )
 
-        execute = should_execute_command(safety_score, threshold = 0.75)
+        execute = should_execute_command(safety_score, threshold=0.75)
+
+        intent_scores.append(intent_confidence)
+        quality_scores.append(quality_score)
+        stability_scores.append(stability)
+        safety_scores.append(safety_score)
+        execute_decisions.append(execute)
 
         print(
             f"Epoch {i+1}/{len(epochs_test)}: "
-            f"Intent Confidence = {intent_confidence:.3f}, "
-            f"Quality Score = {quality_score:.3f}, "
-            f"Stability = {stability:.3f}, "
-            f"Safety Score = {safety_score:.3f}, "
-            f"Execute Command = {'Yes' if execute else 'No'}"
+            f"\n   - Intent Confidence = {intent_confidence:.3f}, "
+            f"\n   - Quality Score = {quality_score:.3f}, "
+            f"\n   - Stability = {stability:.3f}, "
+            f"\n   - Safety Score = {safety_score:.3f}, "
+            f"\n   - Execute Command = {'Yes' if execute else 'No'}"
+            f"\n"
         )
+    
+    # Print a summary
+    print("\n\n\nSummary of Simulation:")
+    print(f"Mean Intent Confidence: {np.mean(intent_scores):.3f}")
+    print(f"Mean Quality Score: {np.mean(quality_scores):.3f}")
+    print(f"Mean Stability: {np.mean(stability_scores):.3f}")
+    print(f"Mean Safety Score: {np.mean(safety_scores):.3f}")
+    print(f"Safety Score Std Dev: {np.std(safety_scores):.3f}")
+    print(f"Execute Percentage: {np.mean(execute_decisions) * 100:.2f}%")
