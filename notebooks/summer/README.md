@@ -39,3 +39,8 @@
     ```bash
     python3 ./notebooks/summer/week_6/epoch_quality_score.py
     ```
+
+- `safety_signal.py` demonstrates a safety layer for a BCI system. This safety layer uses the determined confidence, quality score, and temporal stability to determine whether a command should be executed or not. The safety layer demo prompts the user to choose between CSP + LDA or EEGNet for the intent recognition model and trains it based on the subjects in the dataset. The safety layer then evaluates the scores and executions of testing epochs.
+    ```bash
+    python3 ./notebooks/summer/week_7/safety_signal.py
+    ```
