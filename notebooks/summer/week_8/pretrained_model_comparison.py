@@ -13,7 +13,7 @@ from sklearn.metrics import accuracy_score
 import mne
 from moabb.datasets import BNCI2014_001
 from moabb.paradigms import MotorImagery
-from transformers import AutoModel
+from braindecode.models import BIOT
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 sys.path.append(PROJECT_ROOT)
@@ -51,30 +51,22 @@ def build_epochs_for_subject(subject_id):
     return epochs, y_int
 
 class BIOT_Model(nn.Module):
-    def __init__(self, model_name = "neurotechlab/biot-eeg-full", n_classes = 2, device = None):
+    def __init__(self, model_name = "braindecode/biot", n_classes = 2, device = None):
         super().__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.backbone = AutoModel.from_pretrained(model_name)
-        self.backbone.to(self.device)
+        self.backbone = BIOT(
+            n_chans = 22,
+            n_times = 256,
+            n_outputs = 2
+        ).to(self.device)
 
-        for p in self.backbone.parameters():
-            p.requires_grad = False
-
-        # Determine embedding dimension
-        dummy_input = torch.zeros(1, 22, 256).to(self.device)
-        with torch.no_grad():
-            out = self.backbone(dummy_input)
-        embedding_dim = out.last_hidden_state.shape[-1]
-
-        # Linear head embeddings to n classes
-        self.head = nn.Linear(embedding_dim, n_classes).to(self.device)
+        # Freeze backbone parameters to prevent training
+        # for p in self.backbone.parameters():
+        #     p.requires_grad = False
 
     def forward(self, x):
-        out = self.backbone(x)
-        embeddings = out.last_hidden_state.mean(dim = 1)
-        logits = self.head(embeddings)
-        return logits
+        return self.backbone(x)
     
     # Train the linear head
     def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 20):
@@ -94,7 +86,7 @@ class BIOT_Model(nn.Module):
         train_loader = DataLoader(train_data, batch_size = batch_size, shuffle = True)
         val_loader = DataLoader(val_data, batch_size = batch_size)
 
-        optimizer = torch.optim.Adam(self.head.parameters(), lr = lr)
+        optimizer = torch.optim.Adam(self.backbone.parameters(), lr = lr)
         criterion = nn.CrossEntropyLoss()
 
         for epoch in range(n_epochs):
@@ -151,3 +143,56 @@ def evaluate_model(model, epochs_test, y_Test, name = "Model"):
     print(f"Std Confidence: {std_conf:.4f}")
 
     return accuracy, mean_conf, std_conf
+
+def main():
+    training_subjects = [1, 2, 3, 5, 6, 7]
+    test_subject = 4
+
+    print("Loading training subjects...")
+    train_epochs_list = []
+    train_labels_list = []
+
+    for subj in training_subjects:
+        epochs, labels = build_epochs_for_subject(subj)
+        train_epochs_list.append(epochs)
+        train_labels_list.append(labels)
+
+    epochs_train = mne.concatenate_epochs(train_epochs_list)
+    y_train = np.concatenate(train_labels_list)
+
+    X_train = epochs_train.get_data()
+    n_chans = X_train.shape[1]
+    n_times = X_train.shape[2]
+
+    print(f"Training data shape: {X_train.shape}")
+
+    # Train EEGNet model
+    print("Training EEGNet Model...")
+    eegnet_model = EEGNet_Model(n_chans = n_chans, n_times = n_times)
+    eegnet_model.fit(X_train, y_train, batch_size = 32, lr = 1e-3, n_epochs = 40)
+
+    # Train BIOT model
+    print("Training BIOT Model...")
+    biot_model = BIOT_Model(model_name = "braindecode/biot", n_classes = 2)
+    biot_model.fit(X_train, y_train, batch_size = 32, lr = 1e-3, n_epochs = 40)
+
+    print("Loading test subject...")
+    epochs_test, y_test = build_epochs_for_subject(test_subject)
+
+    # Evaluate EEGNet model
+    accuracy_eegnet, conf_eegnet, std_eegnet = evaluate_model(
+        eegnet_model, epochs_test, y_test, name = "EEGNet"
+    )
+
+    # Evaluate BIOT model
+    accuracy_biot, conf_biot, std_biot = evaluate_model(
+        biot_model, epochs_test, y_test, name = "BIOT"
+    )
+
+    print("\n=== Summary ===")
+    print(f"EEGNet vs BIOT Accuracy: {accuracy_eegnet:.4f} vs {accuracy_biot:.4f}")
+    print(f"EEGNet vs BIOT Mean Confidence: {conf_eegnet:.4f} vs {conf_biot:.4f}")
+    print(f"EEGNet vs BIOT Std Confidence: {std_eegnet:.4f} vs {std_biot:.4f}")
+
+if __name__ == "__main__":
+    main()
