@@ -44,3 +44,8 @@
     ```bash
     python3 ./notebooks/summer/week_7/safety_signal.py
     ```
+
+- `pretrained_model_comparison.py` compares the performance of BIOT and EEGNet on the same motor imagery dataset used in the previous notebooks. The comparison trains both BIOT and EEGNet, though the backbone of BIOT can be frozen by modifying the relevant lines of code (`65, 66, 99`). The performance of the models are then evaluated and compared.
+    ```bash
+    python3 ./notebooks/summer/week_8/pretrained_model_comparison.py
+    ```
