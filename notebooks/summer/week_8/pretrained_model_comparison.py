@@ -127,3 +127,27 @@ class BIOT_Model(nn.Module):
             logits = self.forward(x)
             probs = torch.softmax(logits, dim = 1)
         return float(probs[0, 1].item())
+    
+def evaluate_model(model, epochs_test, y_Test, name = "Model"):
+    preds = []
+    confs = []
+
+    for i in range(len(epochs_test)):
+        epoch_data = epochs_test.get_data()[i]
+        prob_right = model.predict_proba(epoch_data)
+        confs.append(prob_right)
+        preds.append(1 if prob_right > 0.5 else 0)
+
+    preds = np.array(preds)
+    y_test = np.array(y_Test)
+
+    accuracy = accuracy_score(y_test, preds)
+    mean_conf = np.mean(confs)
+    std_conf = np.std(confs)
+
+    print(f"\n=== {name} Evaluation ===")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Mean Confidence: {mean_conf:.4f}")
+    print(f"Std Confidence: {std_conf:.4f}")
+
+    return accuracy, mean_conf, std_conf
