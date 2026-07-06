@@ -7,5 +7,5 @@ I created CSP + LDA pipelines for multiple subjects and applied temperature scal
 
 ### Files
 
-- notebooks/week_5/eegnet_scaling.py
-- notebooks/week_5/csp_lda_scaling.py
+- notebooks/summer/week_5/eegnet_scaling.py
+- notebooks/summer/week_5/csp_lda_scaling.py

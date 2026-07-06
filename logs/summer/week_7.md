@@ -23,7 +23,7 @@ Despite EEGNet's overconfidence from Week 5, CSP + LDA had a higher percentage o
 
 ### Files
 
-- notebooks/week_7/safety_signal.py
+- notebooks/summer/week_7/safety_signal.py
 
 - models/csp_lda.py
 - models/eegnet.py

@@ -9,5 +9,5 @@ I implemented CSP + LDA classification pipeline for left vs right hand motor ima
 
 ### Files
 
-- notebooks/week_3/csp_lda_competition.py
-- notebooks/week_3/moabb_csp_lda_competition.py
+- notebooks/summer/week_3/csp_lda_competition.py
+- notebooks/summer/week_3/moabb_csp_lda_competition.py

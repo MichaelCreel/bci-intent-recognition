@@ -13,4 +13,4 @@ I loaded one subject from PhysioNet movement dataset and plotted the data in mut
 
 ### Files
 
-- notebooks/week_2/physionet_data.py
+- notebooks/summer/week_2/physionet_data.py

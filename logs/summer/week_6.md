@@ -5,4 +5,4 @@ I created an epoch quality score classifier using a random forest model. This cl
 
 ### Files
 
-- notebooks/week_6/epoch_quality_score.py
+- notebooks/summer/week_6/epoch_quality_score.py
