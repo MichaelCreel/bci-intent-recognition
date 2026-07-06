@@ -86,3 +86,33 @@ class BIOT_Model(nn.Module):
         logits = self.predict_logits(epoch_data)
         probs = torch.softmax(logits, dim = 0)
         return float(probs[1].item())
+    
+    def save(self, path):
+        torch.save({
+            "model_state": self.model.state_dict(),
+            "scaler_state": self.scaler.state_dict() if self.scaler else None,
+            "n_chans": self.model.n_chans,
+            "n_times": self.model.n_times,
+            "n_classes": self.model.n_classes,
+            "device": self.device
+        }, path)
+
+    @staticmethod
+    def load(path, device = None):
+        checkpoint = torch.load(path, map_location = torch.device("cpu"))
+
+        model = BIOT_Model(
+            n_chans = checkpoint["n_chans"],
+            n_times = checkpoint["n_times"],
+            n_classes = checkpoint["n_classes"],
+            device = device or checkpoint["device"]
+        )
+
+        model.model.load_state_dict(checkpoint["model_state"])
+
+        scaler = TemperatureScaler()
+        if checkpoint["scaler_state"] is not None:
+            scaler.load_state_dict(checkpoint["scaler_state"])
+        model.scaler = scaler
+
+        return model
