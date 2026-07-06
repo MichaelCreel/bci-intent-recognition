@@ -31,6 +31,11 @@ Tests ensure that your environment is set up and functioning correctly
     python3 ./tests/eegnet_test.py
     ```
 
+- `models_test.py` imports models from the models folder, tests them, and trains them on sample motor imagery subjects to compare their performance.
+    ```bash
+    python3 ./tests/models_test.py
+    ```
+
 ## Notebooks
 
 Notebooks are scripts that practice using datasets, models, and pipelines to learn valuable information about the data and models. This information will be used to determine and design the best final model and pipeline for the project.
