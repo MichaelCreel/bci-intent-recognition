@@ -93,23 +93,28 @@ class EEGNet_Model:
             "scaler_state": self.scaler.state_dict() if self.scaler else None,
             "n_chans": self.model.n_chans,
             "n_times": self.model.n_times,
-            "device": self.device
+            "device": self.device,
+            "n_classes": self.model.n_outputs,
         }, path)
 
     @staticmethod
-    def load(path):
-        checkpoint = torch.load(path, map_location = torch.device("cpu"))
+    def load(path, device=None):
+        checkpoint = torch.load(path, map_location=torch.device("cpu"))
+
         model = EEGNet_Model(
-            n_chans = checkpoint["n_chans"],
-            n_times = checkpoint["n_times"],
-            device = "cpu"
+            n_chans=checkpoint["n_chans"],
+            n_times=checkpoint["n_times"],
+            n_classes=checkpoint["n_classes"],
+            device=device or checkpoint["device"]
         )
 
         model.model.load_state_dict(checkpoint["model_state"])
 
-        scaler = TemperatureScaler().to(torch.device or checkpoint["device"])
+        scaler_device = torch.device(device or checkpoint["device"])
+        scaler = TemperatureScaler().to(scaler_device)
+
         if checkpoint["scaler_state"] is not None:
             scaler.load_state_dict(checkpoint["scaler_state"])
+
         model.scaler = scaler
-        
         return model

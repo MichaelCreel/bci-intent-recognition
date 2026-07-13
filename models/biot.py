@@ -105,7 +105,8 @@ class BIOT_Model(nn.Module):
 
         model.model.load_state_dict(checkpoint["model_state"])
 
-        scaler = TemperatureScaler().to(torch.device or checkpoint["device"])
+        scaler_device = torch.device(device or checkpoint["device"])
+        scaler = TemperatureScaler().to(scaler_device)
         if checkpoint["scaler_state"] is not None:
             scaler.load_state_dict(checkpoint["scaler_state"])
         model.scaler = scaler

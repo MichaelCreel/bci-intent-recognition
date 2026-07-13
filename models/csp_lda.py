@@ -5,6 +5,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.serialization
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from mne.decoding import CSP
 from sklearn.model_selection import train_test_split
@@ -68,18 +69,29 @@ class CSP_LDA_Model:
             "csp": self.csp,
             "lda": self.lda,
             "temperature": self.scaler.state_dict(),
-            "n_components": self.n_components
+            "n_components": self.n_components,
         }, path)
 
     @staticmethod
     def load(path):
-        checkpoint = torch.load(path, map_location = torch.device("cpu"))
-        model = CSP_LDA_Model(n_components = checkpoint["n_components"])
+        import torch.serialization
+        from mne.decoding import CSP
+
+        torch.serialization.add_safe_globals([CSP])
+
+        checkpoint = torch.load(path, map_location=torch.device("cpu"), weights_only=False)
+
+        model = CSP_LDA_Model()
+
         model.csp = checkpoint["csp"]
         model.lda = checkpoint["lda"]
+        model.n_components = checkpoint["n_components"]
 
-        scaler = TemperatureScaler().to(torch.device or checkpoint["device"])
-        scaler.load_state_dict(checkpoint["temperature"])
+        scaler = TemperatureScaler().to("cpu")
+
+        if checkpoint["temperature"] is not None:
+            scaler.load_state_dict(checkpoint["temperature"])
+
         model.scaler = scaler
 
         return model
