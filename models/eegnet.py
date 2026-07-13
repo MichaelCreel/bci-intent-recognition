@@ -55,9 +55,23 @@ class EEGNet_Model:
                 loss.backward()
                 optimizer.step()
 
+        logits_list = []
+        labels_list = []
+
+        self.model.eval()
+        with torch.no_grad():
+            for xb, yb in val_loader:
+                xb, yb = xb.to(self.device), yb.to(self.device)
+                logits = self.model(xb)
+                logits_list.append(logits.cpu())
+                labels_list.append(yb.cpu())
+
+        logits_val = torch.cat(logits_list)
+        labels_val = torch.cat(labels_list)
+
         # Fit temperature scaler
-        self.scaler = TemperatureScaler()
-        self.scaler.fit(self.model, val_loader, self.device)
+        self.scaler = TemperatureScaler().to(self.device)
+        self.scaler.fit(logits_val, labels_val)
 
     def predict_proba(self, epoch_data):
         x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0).to(self.device)
@@ -93,7 +107,7 @@ class EEGNet_Model:
 
         model.model.load_state_dict(checkpoint["model_state"])
 
-        scaler = TemperatureScaler()
+        scaler = TemperatureScaler().to(torch.device or checkpoint["device"])
         if checkpoint["scaler_state"] is not None:
             scaler.load_state_dict(checkpoint["scaler_state"])
         model.scaler = scaler

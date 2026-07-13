@@ -68,7 +68,7 @@ class BIOT_Model(nn.Module):
         logits_val = torch.cat(logits_list)
         labels_val = torch.cat(labels_list)
 
-        self.scaler = TemperatureScaler()
+        self.scaler = TemperatureScaler().to(self.device)
         self.scaler.fit(logits_val, labels_val)
     
     def predict_logits(self, epoch_data):
@@ -105,7 +105,7 @@ class BIOT_Model(nn.Module):
 
         model.model.load_state_dict(checkpoint["model_state"])
 
-        scaler = TemperatureScaler()
+        scaler = TemperatureScaler().to(torch.device or checkpoint["device"])
         if checkpoint["scaler_state"] is not None:
             scaler.load_state_dict(checkpoint["scaler_state"])
         model.scaler = scaler

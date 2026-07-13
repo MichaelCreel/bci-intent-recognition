@@ -40,7 +40,7 @@ class CSP_LDA_Model:
         logits_val = np.column_stack([-logits_val, logits_val])
 
         # Fit temperature scaler
-        self.scaler = TemperatureScaler()
+        self.scaler = TemperatureScaler().to(self.device)
         self.scaler.fit(logits_val, y_val)
 
     def predict_proba(self, epoch_data):
@@ -78,7 +78,7 @@ class CSP_LDA_Model:
         model.csp = checkpoint["csp"]
         model.lda = checkpoint["lda"]
 
-        scaler = TemperatureScaler()
+        scaler = TemperatureScaler().to(torch.device or checkpoint["device"])
         scaler.load_state_dict(checkpoint["temperature"])
         model.scaler = scaler
 
