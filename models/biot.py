@@ -88,7 +88,7 @@ class BIOT_Model(nn.Module):
             "scaler_state": self.scaler.state_dict() if self.scaler else None,
             "n_chans": self.model.n_chans,
             "n_times": self.model.n_times,
-            "n_classes": self.model.n_classes,
+            "n_classes": self.model.n_outputs,
             "device": self.device
         }, path)
 
