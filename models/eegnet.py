@@ -7,43 +7,7 @@ import torch
 import torch.nn as nn
 from braindecode.models import EEGNet
 from sklearn.model_selection import train_test_split
-
-class TemperatureScaler(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.temperature = nn.Parameter(torch.ones(1))
-
-    def forward(self, logits):
-        return logits / self.temperature
-    
-def fit_temperature_scaler(model, val_loader, device):
-    model.eval()
-    scaler = TemperatureScaler().to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.LBFGS([scaler.temperature], lr = 0.01, max_iter = 50)
-
-    logits_list = []
-    labels_list = []
-
-    with torch.no_grad():
-        for xb, yb in val_loader:
-            xb, yb = xb.to(device), yb.to(device)
-            logits = model(xb)
-            logits_list.append(logits)
-            labels_list.append(yb)
-
-    logits = torch.cat(logits_list)
-    labels = torch.cat(labels_list)
-
-    def closure():
-        optimizer.zero_grad()
-        loss = criterion(scaler(logits), labels)
-        loss.backward()
-        return loss
-    
-    optimizer.step(closure)
-    return scaler
-
+from models.temperature_scaler import TemperatureScaler
 class EEGNet_Model:
     def __init__(self, n_chans, n_times, n_classes = 2, device = None):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -92,7 +56,8 @@ class EEGNet_Model:
                 optimizer.step()
 
         # Fit temperature scaler
-        self.scaler = fit_temperature_scaler(self.model, val_loader, self.device)
+        self.scaler = TemperatureScaler()
+        self.scaler.fit(self.model, val_loader, self.device)
 
     def predict_proba(self, epoch_data):
         x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0).to(self.device)

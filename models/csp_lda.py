@@ -8,31 +8,7 @@ import torch.nn as nn
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from mne.decoding import CSP
 from sklearn.model_selection import train_test_split
-
-class TemperatureScaler(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.temperature = nn.Parameter(torch.ones(1))
-
-    def forward(self, logits):
-        return logits / self.temperature
-    
-def fit_temperature_scaler(logits, labels):
-    logits_t = torch.tensor(logits, dtype = torch.float32)
-    labels_t = torch.tensor(labels, dtype = torch.long)
-
-    scaler = TemperatureScaler()
-    optimizer = torch.optim.LBFGS([scaler.temperature], lr = 0.01, max_iter = 50)
-    criterion = nn.CrossEntropyLoss()
-
-    def closure():
-        optimizer.zero_grad()
-        loss = criterion(scaler(logits_t), labels_t)
-        loss.backward()
-        return loss
-    
-    optimizer.step(closure)
-    return scaler
+from models.temperature_scaler import TemperatureScaler
 
 class CSP_LDA_Model:
     def __init__(self, n_components = 6):
@@ -64,7 +40,8 @@ class CSP_LDA_Model:
         logits_val = np.column_stack([-logits_val, logits_val])
 
         # Fit temperature scaler
-        self.scaler = fit_temperature_scaler(logits_val, y_val)
+        self.scaler = TemperatureScaler()
+        self.scaler.fit(logits_val, y_val)
 
     def predict_proba(self, epoch_data):
         X = epoch_data[np.newaxis, :, :]
