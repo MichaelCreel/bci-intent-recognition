@@ -130,6 +130,15 @@ def main():
         print(f"Mean Confidence: {np.mean(arr[:, 1]):.4f} std: {np.std(arr[:, 1]):.4f}")
         print(f"Std Confidence: {np.mean(arr[:, 2]):.4f} std: {np.std(arr[:, 2]):.4f}")
 
+    input("Save models to models folder? (Y/N):")
+    save_models = input().strip().lower() == "y"
+    if save_models:
+        print("Saving models...")
+        csp_model.save("models/csp_lda_model.pt")
+        eegnet_model.save("models/eegnet_model.pt")
+        biot_model.save("models/biot_model.pt")
+        print("Models saved.")
+
     summarize("CSP + LDA", results_csp)
     summarize("EEGNet", results_eegnet)
     summarize("BIOT", results_biot)
