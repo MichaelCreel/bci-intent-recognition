@@ -8,29 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from braindecode.models import BIOT
-
-class TemperatureScaler(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.temperature = nn.Parameter(torch.ones(1))
-
-    def forward(self, logits):
-        return logits / self.temperature
-    
-    def fit(self, logits, labels, lr = 1e-2, n_epochs = 200):
-        optimizer = torch.optim.LBFGS([self.temperature], lr = lr, max_iter = n_epochs)
-
-        logits = torch.tensor(logits, dtype = torch.float32)
-        labels = torch.tensor(labels, dtype = torch.long)
-        criterion = nn.CrossEntropyLoss()
-
-        def closure():
-            optimizer.zero_grad()
-            loss = criterion(self(logits), labels)
-            loss.backward()
-            return loss
-        
-        optimizer.step(closure)
+from models.temperature_scaler import TemperatureScaler
 
 class BIOT_Model(nn.Module):
     def __init__(self, n_chans = 22, n_times = 256, n_classes = 2, device = None):
@@ -75,6 +53,23 @@ class BIOT_Model(nn.Module):
                 loss = criterion(logits, yb)
                 loss.backward()
                 optimizer.step()
+
+        logits_list = []
+        labels_list = []
+
+        self.model.eval()
+        with torch.no_grad():
+            for xb, yb in val_loader:
+                xb = xb.to(self.device)
+                logits = self.model(xb)
+                logits_list.append(logits.cpu())
+                labels_list.append(yb)
+
+        logits_val = torch.cat(logits_list)
+        labels_val = torch.cat(labels_list)
+
+        self.scaler = TemperatureScaler()
+        self.scaler.fit(logits_val, labels_val)
     
     def predict_logits(self, epoch_data):
         x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0).to(self.device)
