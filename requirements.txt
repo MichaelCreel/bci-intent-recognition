@@ -2,7 +2,6 @@ mne
 braindecode
 moabb
 numpy
-spicy
 matplotlib
 pandas
 scikit-learn
