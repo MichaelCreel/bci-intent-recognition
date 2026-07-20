@@ -1,6 +1,12 @@
 # BCI Intent Recognition
 
-This project is intended to utilize an AI model for determining the confidence of an intention. The model will be trained using EEG data and designed to determine whether an action performed by a user is deterministic or hesitant. This result will modify drone movement based on the confidence determined by the model, making sure hesitant actions are performed safely and smoothly while deterministic actions are performed as the user wishes.
+This project will utilize an artificial intelligence model as a safety layer for drone control. The model will be trained using EEG data and designed to determine whether an action performed by a user is deterministic (high-confidence) or hesitant (low-confidence). This result will modify drone movement based on the confidence determined by the model, ensuring hesitant actions are performed safely or canceled, while deterministic actions are performed as the user wishes.
+
+This project includes several models that were tested on PhysioNet Motor Imagery EEG data to determine the best model for this project. These models are evaluated on accuracy, accuracy variance, confidence, and confidence variance to determine the best model for a safety application. The best model will be applied to a drone control application and used in real-time to determine the confidence of user flight actions. The three models tested for this application are:
+
+- CSP + LDA Pipeline
+- EEGNet
+- BIOT
 
 This is a sophomore research project under [Huixin Zhan](https://github.com/huixin-zhan-ai) through [Zhan Lab](https://zhan-lab-ai.github.io/) at New Mexico Tech.
 
@@ -11,7 +17,6 @@ This is a sophomore research project under [Huixin Zhan](https://github.com/huix
 - Braindecode
 - MOABB
 - Numpy
-- Spicy
 - Matplotlib
 - Pandas
 - Scikit-learn
