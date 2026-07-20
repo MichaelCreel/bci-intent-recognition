@@ -10,6 +10,14 @@ This is a sophomore research project under [Huixin Zhan](https://github.com/huix
 - MNE-Python
 - Braindecode
 - MOABB
+- Numpy
+- Spicy
+- Matplotlib
+- Pandas
+- Scikit-learn
+- AutoReject
+- Torch
+- Transformers
 
 PyTorch will be installed with Braindecode, but installing the CUDA based PyTorch (if not automatically installed) will allow PyTorch to be accelerated using your discrete video card if available.
 
