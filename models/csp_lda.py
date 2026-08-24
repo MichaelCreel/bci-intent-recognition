@@ -18,8 +18,18 @@ class CSP_LDA_Model:
         self.lda = None
         self.scaler = None
 
+    def _normalize(self, X):
+        mean = X.mean(axis = -1, keepdims = True)
+        std = X.std(axis = -1, keepdims = True) + 1e-6
+        return (X - mean) / std
+
     # Training
     def fit(self, X, y):
+        np.random.seed(50)
+        torch.manual_seed(50)
+
+        X = self._normalize(X)
+
         #Split for calibration
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, test_size = 0.2, stratify = y
@@ -41,11 +51,14 @@ class CSP_LDA_Model:
         logits_val = np.column_stack([-logits_val, logits_val])
 
         # Fit temperature scaler
-        self.scaler = TemperatureScaler()
-        self.scaler.fit(logits_val, y_val)
+        logits_t = torch.tensor(logits_val, dtype = torch.float32)
+        labels_t = torch.tensor(y_val, dtype = torch.long)
+        self.scaler = TemperatureScaler().to("cpu")
+        self.scaler.fit(logits_t, labels_t)
 
     def predict_proba(self, epoch_data):
         X = epoch_data[np.newaxis, :, :]
+        X = self._normalize(X)
 
         # CSP Transform
         X_csp = self.csp.transform(X)
