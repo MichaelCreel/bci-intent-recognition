@@ -10,6 +10,8 @@ from sklearn.model_selection import train_test_split
 from models.temperature_scaler import TemperatureScaler
 class EEGNet_Model:
     def __init__(self, n_chans, n_times, n_classes = 2, device = None):
+        np.random.seed(50)
+        torch.manual_seed(50)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         # EEGNet model
@@ -20,8 +22,15 @@ class EEGNet_Model:
         ).to(self.device)
 
         self.scaler = None
+
+    def _normalize(self, X):
+        mean = X.mean(axis = -1, keepdims = True)
+        std = X.std(axis = -1, keepdims = True) + 1e-6
+        return (X - mean) / std        
     
     def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 40):
+        X = self._normalize(X)
+
         # Split for calibration
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, test_size = 0.2, stratify = y
@@ -41,8 +50,11 @@ class EEGNet_Model:
         val_loader = torch.utils.data.DataLoader(val_data, batch_size = batch_size)
 
         # Optimizer and loss
-        optimizer = torch.optim.Adam(self.model.parameters(), lr = lr)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr = lr, weight_decay = 1e-4)
         criterion = nn.CrossEntropyLoss()
+
+        best_val_loss = float("inf")
+        best_state = None
 
         # Train model
         for epoch in range(n_epochs):
@@ -55,6 +67,33 @@ class EEGNet_Model:
                 loss.backward()
                 optimizer.step()
 
+            # Validation
+            self.model.eval()
+            val_loss = 0.0
+            correct = 0
+            total = 0
+
+            with torch.no_grad():
+                for xb, yb in val_loader:
+                    xb, yb = xb.to(self.device), yb.to(self.device)
+                    logits = self.model(xb)
+                    loss = criterion(logits, yb)
+                    val_loss += loss.item() * xb.size(0)
+                    preds = torch.argmax(logits, dim = 1)
+                    correct += (preds == yb).sum().item()
+                    total += yb.size(0)
+
+            val_loss /= len(val_loader.dataset)
+            val_acc = correct / total
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_state = self.model.state_dict()
+
+        # Load best model state
+        if best_state is not None:
+            self.model.load_state_dict(best_state)
+
         logits_list = []
         labels_list = []
 
@@ -66,15 +105,17 @@ class EEGNet_Model:
                 logits_list.append(logits.cpu())
                 labels_list.append(yb.cpu())
 
-        logits_val = torch.cat(logits_list)
-        labels_val = torch.cat(labels_list)
+        logits_val = torch.cat(logits_list).to(self.device)
+        labels_val = torch.cat(labels_list).to(self.device)
 
         # Fit temperature scaler
         self.scaler = TemperatureScaler().to(self.device)
         self.scaler.fit(logits_val, labels_val)
 
     def predict_proba(self, epoch_data):
-        x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0).to(self.device)
+        x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0)
+        x = self._normalize(x.numpy()).astype(np.float32)
+        x = torch.tensor(x, dtype = torch.float32).to(self.device)
 
         with torch.no_grad():
             logits = self.model(x)
