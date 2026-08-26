@@ -49,6 +49,11 @@ Tests ensure that your environment is set up and functioning correctly
     python3 ./tests/models_test.py
     ```
 
+- `full_loso.py` runs leave-one-subject-out generalization tests with every subject in the PhysioNet Motor Imagery dataset to determine the best model for individual generalization.
+    ```bash
+    python3 ./tests/full_loso.py
+    ```
+
 ## Notebooks
 
 Notebooks are scripts that practice using datasets, models, and pipelines to learn valuable information about the data and models. This information will be used to determine and design the best final model and pipeline for the project.
