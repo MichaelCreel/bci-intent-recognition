@@ -10,5 +10,6 @@ figs/week_2/*.png
 figs/week_4/*.png
 figs/week_5/*.png
 figs/week_9/*.png
+figs/eval/*.png
 models/__pycache__/
 models/*.pt
