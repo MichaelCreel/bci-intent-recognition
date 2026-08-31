@@ -170,11 +170,11 @@ def main():
         
         print("Training EEGNet model...")
         eegnet_model = EEGNet_Model(n_chans = n_chans, n_times = n_times)
-        eegnet_model.fit(X_train, y_train, batch_size = 32, lr = 1e-3, n_epochs = 40)
+        eegnet_model.fit(X_train, y_train)
         
         print("Training BIOT model...")
         biot_model = BIOT_Model(n_chans = n_chans, n_times = n_times, n_classes = 2)
-        biot_model.fit(X_train, y_train, batch_size = 32, lr = 1e-3, n_epochs = 40)
+        biot_model.fit(X_train, y_train)
 
         for name, model in [("CSP + LDA", csp_lda_model), ("EEGNet", eegnet_model), ("BIOT", biot_model)]:
             probs, labels = collect_probs_and_labels(model, epochs_test, y_test)
