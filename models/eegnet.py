@@ -8,6 +8,7 @@ import torch.nn as nn
 from braindecode.models import EEGNet
 from sklearn.model_selection import train_test_split
 from models.temperature_scaler import TemperatureScaler
+
 class EEGNet_Model:
     def __init__(self, n_chans, n_times, n_classes = 2, device = None):
         np.random.seed(50)
@@ -89,6 +90,8 @@ class EEGNet_Model:
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 best_state = self.model.state_dict()
+
+        print(f"X Shape {X_train.shape}")
 
         # Load best model state
         if best_state is not None:
