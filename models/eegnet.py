@@ -91,8 +91,6 @@ class EEGNet_Model:
                 best_val_loss = val_loss
                 best_state = self.model.state_dict()
 
-        print(f"X Shape {X_train.shape}")
-
         # Load best model state
         if best_state is not None:
             self.model.load_state_dict(best_state)
