@@ -203,7 +203,6 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
     figures.append(file_name)
     plt.close()
 
-
 def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model"):
     preds = (probs > 0.5).astype(int)
     wrong = probs[labels != preds]

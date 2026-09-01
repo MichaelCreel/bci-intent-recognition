@@ -100,35 +100,67 @@ def compute_mce(probs, labels, n_bins = 10):
 
     return max(errors) if errors else 0.0
 
-def reliability_diagram(probs, labels, n_bins = 10, title = "Reliability Diagram"):
+def symmetric_accuracy_diagram(probs, labels, n_bins = 10, title = "Symmetric Accuracy Diagram"):
     bins = np.linspace(0.0, 1.0, n_bins + 1)
     preds = (probs > 0.5).astype(int)
-
-    bin_confs = []
-    bin_accs = []
+    bin_probs, bin_accs = [], []
 
     for i in range(n_bins):
         start, end = bins[i], bins[i + 1]
         idx = np.where((probs >= start) & (probs < end))[0]
-
-        if len(idx) == 0:
-            continue
-
-        bin_confs.append(np.mean(probs[idx]))
+        if len(idx) == 0: continue
+        bin_probs.append(np.mean(probs[idx]))
         bin_accs.append(np.mean(labels[idx] == preds[idx]))
 
     plt.figure()
-    plt.plot(bin_confs, bin_accs, marker = "o", label = "Model")
-    plt.plot([0, 1], [0, 1], color = "gray", label = "Perfect")
-    plt.xlabel("Confidence")
+    plt.plot(bin_probs, bin_accs, marker = "o", label = "Model")
+
+    perfect_x = np.linspace(0.0, 1.0, 100)
+    perfect_y = np.maximum(perfect_x, 1 - perfect_x)
+    plt.plot(perfect_x, perfect_y, color = "gray", label = "Perfect Calibration")
+
+    plt.xlabel("Predicted Probability P(Right Hand) [Left < 0.5]")
     plt.ylabel("Accuracy")
     plt.title(title)
     plt.legend()
     plt.grid(True)
-    title = title.replace(" ", "_")
-    plt.savefig(f"figs/week_9/{title}.png")
-    figures.append(f"{title}.png")
-    plt.show(block = False)
+
+    title_safe = title.replace(" ", "_")
+    file_name = f"{title_safe}.png"
+    plt.savefig(f"figs/week_9/{file_name}.png")
+    figures.append(file_name)
+    plt.close()
+
+def confidence_calibration_diagram(probs, labels, n_bins = 10, title = "Confidence Calibration Diagram"):
+    confidences = np.maximum(probs, 1 - probs)
+    preds = (probs > 0.5).astype(int)
+
+    bins = np.linspace(0.5, 1.0, n_bins + 1)
+    bin_confs, bin_accs = [], []
+
+    for i in range(n_bins):
+        start, end = bins[i], bins[i + 1]
+        idx = np.where((confidences >= start) & (confidences < end))[0]
+        if len(idx) == 0: continue
+        bin_confs.append(np.mean(confidences[idx]))
+        bin_accs.append(np.mean(labels[idx] == preds[idx]))
+    
+    plt.figure()
+    plt.plot(bin_confs, bin_accs, marker = "o", label = "Model")
+
+    plt.plot([0.5, 1.0], [0.5, 1.0], color = "gray", label = "Perfect Calibration")
+
+    plt.xlabel("Confidence Max")
+    plt.ylabel("Accuracy")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+
+    title_safe = title.replace(" ", "_")
+    file_name = f"{title_safe}.png"
+    plt.savefig(f"figs/week_9/{file_name}.png")
+    figures.append(file_name)
+    plt.close()
 
 def confidence_histograms(probs, labels, title_prefix = "Model"):
     preds = (probs > 0.5).astype(int)
@@ -251,7 +283,8 @@ def main():
         entry["ece"] = compute_ece(probs, labels)
         entry["mce"] = compute_mce(probs, labels)
 
-        reliability_diagram(probs, labels, n_bins=10, title=f"{name} Reliability Diagram")
+        symmetric_accuracy_diagram(probs, labels, title=f"{name} Symmetric Accuracy Diagram")
+        confidence_calibration_diagram(probs, labels, title=f"{name} Confidence Calibration Diagram")
         confidence_histograms(probs, labels, title_prefix=name)
 
         threshold = 0.75
