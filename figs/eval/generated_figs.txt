@@ -1,9 +1,13 @@
-CSP_+_LDA_Reliability_Diagram.png
+CSP_+_LDA_Symmetric_Accuracy_Diagram.png
+CSP_+_LDA_Confidence_Calibration_Diagram.png
 CSP_+_LDA_Confidence_Histogram.png
 CSP_+_LDA_Wrong_Predictions_Confidence_Histogram.png
-EEGNet_Reliability_Diagram.png
+EEGNet_Symmetric_Accuracy_Diagram.png
+EEGNet_Confidence_Calibration_Diagram.png
 EEGNet_Confidence_Histogram.png
 EEGNet_Wrong_Predictions_Confidence_Histogram.png
-BIOT_Reliability_Diagram.png
+BIOT_Symmetric_Accuracy_Diagram.png
+BIOT_Confidence_Calibration_Diagram.png
 BIOT_Confidence_Histogram.png
 BIOT_Wrong_Predictions_Confidence_Histogram.png
+Risk_Coverage_Curve.png

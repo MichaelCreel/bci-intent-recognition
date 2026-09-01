@@ -78,32 +78,131 @@ def compute_mce(probs, labels, n_bins = 10):
         errors.append(np.abs(bin_acc - bin_conf))
     return max(errors) if errors else 0.0
 
-def reliability_diagram(probs, labels, eval_dir, n_bins = 10, title = "Reliability Diagram"):
+def compute_split_conformal(probs, labels, alpha = 0.1, calib_frac = 0.2, random_state = 50):
+    np.random.seed(random_state)
+    n_samples = len(labels)
+    indices = np.random.permutation(n_samples)
+    n_calib = int(n_samples * calib_frac)
+
+    calib_idx = indices[:n_calib]
+    test_idx = indices[n_calib:]
+
+    calib_probs, calib_labels = probs[calib_idx], labels[calib_idx]
+    test_probs, test_labels = probs[test_idx], labels[test_idx]
+
+    # Score = 1 - probability of the true class
+    calib_true_probs = np.where(calib_labels == 1, calib_probs, 1 - calib_probs)
+    calib_scores = 1 - calib_true_probs
+
+    n = len(calib_scores)
+    q_level = np.ceil((n + 1) * (1 - alpha)) / n
+    q_level = min(q_level, 1.0)
+
+    q_hat = np.quantile(calib_scores, q_level, method = 'higher')
+
+    in_set_1 = (1.0 - test_probs) <= q_hat
+    in_set_0 = test_probs <= q_hat
+
+    covered = np.where(test_labels == 1, in_set_1, in_set_0)
+    empirical_coverage = np.mean(covered)
+    avg_set_size = np.mean(in_set_1.astype(int) + in_set_0.astype(int))
+    return empirical_coverage, avg_set_size
+
+def plot_risk_coverage(pooled_results, eval_dir, title="Risk-Coverage Curve"):
+    plt.figure(figsize=(8, 6))
+
+    for name, data in pooled_results.items():
+        probs = np.array(data["probs"])
+        labels = np.array(data["labels"])
+
+        confidences = np.maximum(probs, 1 - probs)
+        preds = (probs > 0.5).astype(int)
+        errors = (preds != labels).astype(int)
+
+        sort_idx = np.argsort(confidences)[::-1]
+        errors_sorted = errors[sort_idx]
+
+        coverages = []
+        risks = []
+        n_samples = len(labels)
+
+        for i in range(1, n_samples + 1):
+            coverages.append(i / n_samples)
+            risks.append(np.mean(errors_sorted[:i]))
+        plt.plot(coverages, risks, label = name, linewidth = 2)
+    plt.xlabel("Coverage (Fraction of Accepted Predictions)")
+    plt.ylabel("Risk (Error Rate)")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True, linestyle="--", alpha = 0.7)
+    title_safe = title.replace(" ", "_")
+    file_name = f"{title_safe}.png"
+    plt.savefig(os.path.join(eval_dir, file_name))
+    figures.append(file_name)
+    plt.close()
+
+def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Symmetric Accuracy Diagram"):
     bins = np.linspace(0.0, 1.0, n_bins + 1)
     preds = (probs > 0.5).astype(int)
-    bin_confs, bin_accs = [], []
+    bin_probs, bin_accs = [], []
 
     for i in range(n_bins):
         start, end = bins[i], bins[i + 1]
         idx = np.where((probs >= start) & (probs < end))[0]
         if len(idx) == 0: continue
-        bin_confs.append(np.mean(probs[idx]))
+        bin_probs.append(np.mean(probs[idx]))
         bin_accs.append(np.mean(labels[idx] == preds[idx]))
 
     plt.figure()
-    plt.plot(bin_confs, bin_accs, marker = "o", label = "Model")
-    plt.plot([0, 1], [0, 1], color = "gray", label = "Perfect")
-    plt.xlabel("Confidence")
+    plt.plot(bin_probs, bin_accs, marker = "o", label = "Model")
+
+    perfect_x = np.linspace(0.0, 1.0, 100)
+    perfect_y = np.maximum(perfect_x, 1 - perfect_x)
+    plt.plot(perfect_x, perfect_y, color = "gray", label = "Perfect Calibration")
+
+    plt.xlabel("Predicted Probability P(Right Hand) [Left < 0.5]")
     plt.ylabel("Accuracy")
     plt.title(title)
     plt.legend()
     plt.grid(True)
+
     title_safe = title.replace(" ", "_")
-    
     file_name = f"{title_safe}.png"
     plt.savefig(os.path.join(eval_dir, file_name))
     figures.append(file_name)
     plt.close()
+
+def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title = "Confidence Calibration Diagram"):
+    confidences = np.maximum(probs, 1 - probs)
+    preds = (probs > 0.5).astype(int)
+
+    bins = np.linspace(0.5, 1.0, n_bins + 1)
+    bin_confs, bin_accs = [], []
+
+    for i in range(n_bins):
+        start, end = bins[i], bins[i + 1]
+        idx = np.where((confidences >= start) & (confidences < end))[0]
+        if len(idx) == 0: continue
+        bin_confs.append(np.mean(confidences[idx]))
+        bin_accs.append(np.mean(labels[idx] == preds[idx]))
+    
+    plt.figure()
+    plt.plot(bin_confs, bin_accs, marker = "o", label = "Model")
+
+    plt.plot([0.5, 1.0], [0.5, 1.0], color = "gray", label = "Perfect Calibration")
+
+    plt.xlabel("Confidence Max")
+    plt.ylabel("Accuracy")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+
+    title_safe = title.replace(" ", "_")
+    file_name = f"{title_safe}.png"
+    plt.savefig(os.path.join(eval_dir, file_name))
+    figures.append(file_name)
+    plt.close()
+
 
 def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model"):
     preds = (probs > 0.5).astype(int)
@@ -212,10 +311,15 @@ def main():
     for name in model_names:
         all_probs = np.array(pooled_results[name]["probs"])
         all_labels = np.array(pooled_results[name]["labels"])
-        reliability_diagram(all_probs, all_labels, eval_dir, n_bins=10, title=f"{name} Reliability Diagram")
+        symmetric_accuracy_diagram(all_probs, all_labels, eval_dir, n_bins=10, title=f"{name} Symmetric Accuracy Diagram")
+        confidence_calibration_diagram(all_probs, all_labels, eval_dir, n_bins=10, title=f"{name} Confidence Calibration Diagram")
         confidence_histograms(all_probs, all_labels, eval_dir, title_prefix=name)
 
+    plot_risk_coverage(pooled_results, eval_dir, title="Risk Coverage Curve")
+
     print("\n==================== Evaluation Summary ====================\n")
+
+    conformal_alpha = 0.1
 
     for name in model_names:
         metrics_list = subject_metrics[name]
@@ -230,6 +334,7 @@ def main():
         
         acc_above_vals = [m["acc_above"] for m in metrics_list if not np.isnan(m["acc_above"])]
         avg_acc_above = np.mean(acc_above_vals) if len(acc_above_vals) > 0 else None
+        emp_cov, avg_size = compute_split_conformal(all_probs, all_labels, alpha=conformal_alpha)
 
         print(f"=== {name} ===")
         print(f"Accuracy: {avg_acc:.4f}")
@@ -240,6 +345,8 @@ def main():
         print(f"Safety Threshold: 0.75")
         print(f"Acceptance Rate: {avg_accept:.4f}")
         print(f"Reject Rate: {avg_reject:.4f}")
+        print(f"Empirical Coverage: {emp_cov:.4f}")
+        print(f"Average Set Size: {avg_size:.4f}")
 
         if avg_acc_above is None:
             print("Accuracy Above Threshold: N/A (No accepted predictions across subjects)")
