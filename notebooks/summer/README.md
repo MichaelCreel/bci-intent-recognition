@@ -50,7 +50,7 @@
     python3 ./notebooks/summer/week_8/pretrained_model_comparison.py
     ```
 
-- `evaluation.py` evaluates the performance of all the models using the motor imagery dataset. The script evaluates the models on accuracy and confidence, expected calibration error (ECE), and maximum calibration error (MCE). The script generates reliability diagrams and confidence and accuracy histograms for each model.
+- `evaluation.py` evaluates the performance of all the models using the motor imagery dataset. The script evaluates the models on accuracy and confidence, expected calibration error (ECE), and maximum calibration error (MCE). The script generates symmetrical accuracy and confidence calibration diagrams, and confidence and accuracy histograms for each model.
     ```bash
     python3 ./notebooks/summer/week_9/evaluation.py
     ```
