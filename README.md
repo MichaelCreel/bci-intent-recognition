@@ -49,7 +49,7 @@ Tests ensure that your environment is set up and functioning correctly
     python3 ./tests/models_test.py
     ```
 
-- `full_loso.py` runs leave-one-subject-out generalization tests with every subject in the PhysioNet Motor Imagery dataset to determine the best model for individual generalization.
+- `full_loso.py` runs leave-one-subject-out generalization tests with every subject in the PhysioNet Motor Imagery dataset to determine the best model for individual generalization. This produces plots of symmetric accuracy and confidence calibration, and confidence histograms for each model. It also produces a risk coverage graph.
     ```bash
     python3 ./tests/full_loso.py
     ```
