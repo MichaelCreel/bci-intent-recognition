@@ -26,6 +26,40 @@ This is a sophomore research project under [Huixin Zhan](https://github.com/huix
 
 PyTorch will be installed with Braindecode, but installing the CUDA based PyTorch (if not automatically installed) will allow PyTorch to be accelerated using your discrete video card if available.
 
+## Setup
+
+1. Install [Python](https://www.python.org/downloads/). Check "Add Python to PATH" during installation.
+2. Clone the repository.
+    ```bash
+    git clone https://github.com/MichaelCreel/bci-intent-recognition.git
+    ```
+3. Navigate to the project directory.
+    ```bash
+    cd /path/you/cloned/to/bci-intent-recognition
+    ```
+4. Run `setup.py`.
+    MacOS/Linux:
+    ```bash
+    python3 setup.py
+    ```
+    Windows:
+    ```Cmd
+    python setup.py
+    ```
+5. Activate the virtual environment.
+    MacOS/Linux:
+    ```bash
+    source ./bci-env/bin/activate
+    ```
+    Windows:
+    ```Cmd
+    .\bci-env\Scripts\Activate.ps1
+    ```
+6. (Windows Optional) Commands in the READMEs use bash syntax and many will not work natively on Windows. Install [Git Bash](https://git-scm.com/install/windows) and create an alias for `python`.
+    ```bash
+    alias python3=python
+    ```
+
 ## Tests
 
 Tests ensure that your environment is set up and functioning correctly
@@ -57,23 +91,3 @@ Tests ensure that your environment is set up and functioning correctly
 ## Notebooks
 
 Notebooks are scripts that practice using datasets, models, and pipelines to learn valuable information about the data and models. This information will be used to determine and design the best final model and pipeline for the project.
-
-## Notes
-
-All commands are written in Bash and should work natively on Linux and MacOS.
-
-```bash
-python3 ./example_script.py
-```
-
-Windows users will need to use a bash terminal emulator such as [Git Bash](https://git-scm.com/install/windows) (automatically installed with Git for Windows) to run the commands. The commands may also need to be modified to run on windows (e.g. using `python` instead of `python3`).
-
-```bash
-python ./example_script.py
-```
-
-An alias can be added to the bash emulator to substitute `python3` for `python` to require less modification of the commands.
-
-```bash
-alias python3=python
-```
