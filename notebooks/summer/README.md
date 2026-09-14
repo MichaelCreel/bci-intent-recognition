@@ -5,12 +5,12 @@
     ```bash
     python3 ./notebooks/summer/week_2/physionet_data.py
     ```
-- `csp_lda_competition.py` implements a CSP + LDA classification pipeline for left vs right hand motor imagery using raw EEG motor imagery data from Physionet. The program measures the accuracy of the pipeline using the provided data.
+- `csp_lda_competition.py` implements a CSP + LDA classification pipeline for left vs right hand motor imagery using raw EEG motor imagery data from EEGBCI. The program measures the accuracy of the pipeline using the provided data.
     ```bash
     python3 ./notebooks/summer/week_3/csp_lda_competition.py
     ```
 
-- `moabb_csp_lda_competition.py` implements a CSP + LDA classification pipeline for left vs right hand motor imagery using the MOABB dataset. The program determines the accuracy of the pipeline using the provided data.
+- `moabb_csp_lda_competition.py` implements a CSP + LDA classification pipeline for left vs right hand motor imagery using the BCI Competition IV - Dataset 2a. The program determines the accuracy of the pipeline using the provided data.
     ```bash
     python3 ./notebooks/summer/week_3/moabb_csp_lda_competition.py
     ```

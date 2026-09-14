@@ -2,7 +2,7 @@
 
 This project will utilize an artificial intelligence model as a safety layer for drone control. The model will be trained using EEG data and designed to determine whether an action performed by a user is deterministic (high-confidence) or hesitant (low-confidence). This result will modify drone movement based on the confidence determined by the model, ensuring hesitant actions are performed safely or canceled, while deterministic actions are performed as the user wishes.
 
-This project includes several models that were tested on PhysioNet Motor Imagery EEG data to determine the best model for this project. These models are evaluated on accuracy, accuracy variance, confidence, and confidence variance to determine the best model for a safety application. The best model will be applied to a drone control application and used in real-time to determine the confidence of user flight actions. The three models tested for this application are:
+This project includes several models that were tested on BCI Competition IV - Dataset 2a EEG data to determine the best model for this project. These models are evaluated on accuracy, accuracy variance, confidence, and confidence variance to determine the best model for a safety application. The best model will be applied to a drone control application and used in real-time to determine the confidence of user flight actions. The three models tested for this application are:
 
 - CSP + LDA Pipeline
 - EEGNet
@@ -83,7 +83,7 @@ Tests ensure that your environment is set up and functioning correctly
     python3 ./tests/models_test.py
     ```
 
-- `full_loso.py` runs leave-one-subject-out generalization tests with every subject in the PhysioNet Motor Imagery dataset to determine the best model for individual generalization. This produces plots of symmetric accuracy and confidence calibration, and confidence histograms for each model. It also produces a risk coverage graph.
+- `full_loso.py` runs leave-one-subject-out generalization tests with every subject in the BCI Competition IV - Dataset 2a to determine the best model for individual generalization. This produces plots of symmetric accuracy and confidence calibration, and confidence histograms for each model. It also produces a risk coverage graph.
     ```bash
     python3 ./tests/full_loso.py
     ```
