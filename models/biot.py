@@ -12,17 +12,30 @@ from braindecode.models import BIOT
 from models.temperature_scaler import TemperatureScaler
 
 class BIOT_Model(nn.Module):
-    def __init__(self, n_chans = 22, n_times = 256, n_classes = 2, device = None):
+    def __init__(self, n_chans = 22, n_times = 256, n_classes = 2, device = None, version = "None"):
         np.random.seed(50)
         torch.manual_seed(50)
         super().__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.scaler = None
 
         self.model = BIOT(
             n_chans = n_chans,
             n_times = n_times,
-            n_outputs = n_classes
+            n_outputs = n_classes,
+            sfreq=250
         ).to(self.device)
+
+        self.pretrained = False
+        if version == "pretrained":
+            print("Loading pre-trained BIOT model.")
+            self.pretrained = True
+            state = torch.load("models/EEG-six-datasets-18-channels.ckpt", map_location="cpu")
+
+            raw_state = state
+            cleaned_state = {k.replace("model.", ""): v for k, v in raw_state.items()}
+
+            self.model.load_state_dict(cleaned_state, strict=False)
 
     def forward(self, x):
         return self.model(x)
@@ -51,49 +64,52 @@ class BIOT_Model(nn.Module):
         train_loader = DataLoader(train_data, batch_size = batch_size, shuffle = True)
         val_loader = DataLoader(val_data, batch_size = batch_size)
 
-        optimizer = torch.optim.Adam(self.model.parameters(), lr = lr, weight_decay = 1e-4)
-        criterion = nn.CrossEntropyLoss()
+        # Skip training if using pre-trained model
+        if not self.pretrained:
+            optimizer = torch.optim.Adam(self.model.parameters(), lr = lr, weight_decay = 1e-4)
+            criterion = nn.CrossEntropyLoss()
 
-        best_val_loss = float("inf")
-        best_state = None
+            best_val_loss = float("inf")
+            best_state = None
 
-        for epoch in range(n_epochs):
-            self.model.train()
-            for xb, yb in train_loader:
-                xb, yb = xb.to(self.device), yb.to(self.device)
-                optimizer.zero_grad()
-                logits = self.model(xb)
-                loss = criterion(logits, yb)
-                loss.backward()
-                optimizer.step()
-
-            # VALIDATION
-            self.model.eval()
-            val_loss = 0.0
-            correct = 0
-            total = 0
-
-            with torch.no_grad():
-                for xb, yb in val_loader:
+            for epoch in range(n_epochs):
+                self.model.train()
+                for xb, yb in train_loader:
                     xb, yb = xb.to(self.device), yb.to(self.device)
+                    optimizer.zero_grad()
                     logits = self.model(xb)
                     loss = criterion(logits, yb)
-                    val_loss += loss.item() * xb.size(0)
+                    loss.backward()
+                    optimizer.step()
 
-                    preds = torch.argmax(logits, dim=1)
-                    correct += (preds == yb).sum().item()
-                    total += yb.size(0)
+                # VALIDATION
+                self.model.eval()
+                val_loss = 0.0
+                correct = 0
+                total = 0
 
-            val_loss /= len(val_loader.dataset)
-            val_acc = correct / total
+                with torch.no_grad():
+                    for xb, yb in val_loader:
+                        xb, yb = xb.to(self.device), yb.to(self.device)
+                        logits = self.model(xb)
+                        loss = criterion(logits, yb)
+                        val_loss += loss.item() * xb.size(0)
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                best_state = self.model.state_dict()
+                        preds = torch.argmax(logits, dim=1)
+                        correct += (preds == yb).sum().item()
+                        total += yb.size(0)
 
-        if best_state is not None:
-            self.model.load_state_dict(best_state)
+                val_loss /= len(val_loader.dataset)
+                val_acc = correct / total
 
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    best_state = self.model.state_dict()
+
+            if best_state is not None:
+                self.model.load_state_dict(best_state)
+
+        # Train temperature scaler regardless of model training
         logits_list = []
         labels_list = []
 
@@ -121,8 +137,17 @@ class BIOT_Model(nn.Module):
             return self.forward(x)[0]
         
     def predict_proba(self, epoch_data):
-        logits = self.predict_logits(epoch_data)
-        probs = torch.softmax(logits, dim=0)
+        x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0)
+        x = self._normalize(x.numpy()).astype(np.float32)
+        x = torch.tensor(x, dtype = torch.float32).to(self.device)
+
+        with torch.no_grad():
+            logits = self.model(x)
+
+            if self.scaler is not None:
+                logits = self.scaler(logits)
+
+            probs = torch.softmax(logits, dim=1)
         return float(probs[1].item())
     
     def save(self, path):
