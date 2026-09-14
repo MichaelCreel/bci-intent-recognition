@@ -90,4 +90,4 @@ Tests ensure that your environment is set up and functioning correctly
 
 ## Notebooks
 
-Notebooks are scripts that practice using datasets, models, and pipelines to learn valuable information about the data and models. This information will be used to determine and design the best final model and pipeline for the project.
+Notebooks are scripts that practice using datasets, models, and pipelines to learn valuable information about the data and models. This information will be used to determine and design the best final model and pipeline for the project. Logs may reference incorrect datasets that have been fixed in the READMEs.
