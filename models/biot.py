@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 from braindecode.models import BIOT
+from braindecode.models.biot import _ClassificationHead
 from models.temperature_scaler import TemperatureScaler
 
 class BIOT_Model(nn.Module):
@@ -148,7 +148,7 @@ class BIOT_Model(nn.Module):
                 logits = self.scaler(logits)
 
             probs = torch.softmax(logits, dim=1)
-        return float(probs[1].item())
+        return float(probs[0, 1].item())
     
     def save(self, path):
         torch.save({
