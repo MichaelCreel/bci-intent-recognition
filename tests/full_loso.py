@@ -235,7 +235,7 @@ def main():
     os.makedirs(eval_dir, exist_ok=True)
     
     subjects = list(range(1, 10))
-    model_names = ["CSP + LDA", "EEGNet", "BIOT"]
+    model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (Pre-Trained)"]
     
     # Store per-subject metrics for averaging later
     subject_metrics = {name: [] for name in model_names}
@@ -274,7 +274,16 @@ def main():
         biot_model = BIOT_Model(n_chans = n_chans, n_times = n_times, n_classes = 2)
         biot_model.fit(X_train, y_train)
 
-        for name, model in [("CSP + LDA", csp_lda_model), ("EEGNet", eegnet_model), ("BIOT", biot_model)]:
+        print("Training BIOT (Pre-Trained) temperature scaler...")
+        biot_pretrained_model = BIOT_Model(n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained")
+        biot_pretrained_model.fit(X_train, y_train)
+
+        for name, model in [
+                ("CSP + LDA", csp_lda_model),
+                ("EEGNet", eegnet_model),
+                ("BIOT", biot_model),
+                ("BIOT (Pre-Trained)", biot_pretrained_model)
+            ]:
             probs, labels = collect_probs_and_labels(model, epochs_test, y_test)
             
             # Save raw data for pooled figures
