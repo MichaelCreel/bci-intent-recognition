@@ -10,4 +10,8 @@ BIOT_Symmetric_Accuracy_Diagram.png
 BIOT_Confidence_Calibration_Diagram.png
 BIOT_Confidence_Histogram.png
 BIOT_Wrong_Predictions_Confidence_Histogram.png
+BIOT_(Pre-Trained)_Symmetric_Accuracy_Diagram.png
+BIOT_(Pre-Trained)_Confidence_Calibration_Diagram.png
+BIOT_(Pre-Trained)_Confidence_Histogram.png
+BIOT_(Pre-Trained)_Wrong_Predictions_Confidence_Histogram.png
 Risk_Coverage_Curve.png
