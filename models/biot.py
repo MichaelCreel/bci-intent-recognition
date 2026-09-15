@@ -28,7 +28,6 @@ class BIOT_Model(nn.Module):
 
         self.pretrained = False
         if version == "pretrained":
-            print("Loading pre-trained BIOT model.")
             self.pretrained = True
             state = torch.load("models/EEG-six-datasets-18-channels.ckpt", map_location="cpu")
 
