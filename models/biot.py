@@ -8,8 +8,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from braindecode.models import BIOT
-from braindecode.models.biot import _ClassificationHead
 from models.temperature_scaler import TemperatureScaler
+import copy
 
 class BIOT_Model(nn.Module):
     def __init__(self, n_chans = 22, n_times = 256, n_classes = 2, device = None, version = "None"):
@@ -103,7 +103,7 @@ class BIOT_Model(nn.Module):
 
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
-                    best_state = self.model.state_dict()
+                    best_state = copy.deepcopy(self.model.state_dict())
 
             if best_state is not None:
                 self.model.load_state_dict(best_state)

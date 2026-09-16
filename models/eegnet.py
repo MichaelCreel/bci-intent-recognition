@@ -8,6 +8,7 @@ import torch.nn as nn
 from braindecode.models import EEGNet
 from sklearn.model_selection import train_test_split
 from models.temperature_scaler import TemperatureScaler
+import copy
 
 class EEGNet_Model:
     def __init__(self, n_chans, n_times, n_classes = 2, device = None):
@@ -85,11 +86,10 @@ class EEGNet_Model:
                     total += yb.size(0)
 
             val_loss /= len(val_loader.dataset)
-            val_acc = correct / total
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
-                best_state = self.model.state_dict()
+                best_state = copy.deepcopy(self.model.state_dict())
 
         # Load best model state
         if best_state is not None:
