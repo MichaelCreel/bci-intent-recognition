@@ -12,7 +12,7 @@ from models.temperature_scaler import TemperatureScaler
 import copy
 
 class BIOT_Model(nn.Module):
-    def __init__(self, n_chans = 22, n_times = 256, n_classes = 2, device = None, version = "None"):
+    def __init__(self, n_chans = 22, n_times = 256, n_classes = 2, device = None, frequency = 250, version = "None"):
         np.random.seed(50)
         torch.manual_seed(50)
         super().__init__()
@@ -23,7 +23,7 @@ class BIOT_Model(nn.Module):
             n_chans = n_chans,
             n_times = n_times,
             n_outputs = n_classes,
-            sfreq=250
+            sfreq=frequency
         ).to(self.device)
 
         self.pretrained = False
