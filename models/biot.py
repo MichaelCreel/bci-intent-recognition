@@ -12,6 +12,12 @@ from models.temperature_scaler import TemperatureScaler
 import copy
 
 class BIOT_Model(nn.Module):
+    # Initialize the model with:
+    # - n_chans: number of EEG channels input into the model
+    # - n_times: the number of time points in the data (n_times / frequency = duration of input tensor in seconds)
+    # - n_classes: number of output classes
+    # - frequency: sampling frequency of the data
+    # - version: load a "pretrained" or "None" model
     def __init__(self, n_chans = 22, n_times = 256, n_classes = 2, device = None, frequency = 250, version = "None"):
         np.random.seed(50)
         torch.manual_seed(50)
@@ -36,14 +42,18 @@ class BIOT_Model(nn.Module):
 
             self.model.load_state_dict(cleaned_state, strict=False)
 
+    # Forward pass through the model
     def forward(self, x):
         return self.model(x)
 
+    # Normalize data
     def _normalize(self, X):
         mean = X.mean(axis = -1, keepdims = True)
         std = X.std(axis = -1, keepdims = True) + 1e-6
         return (X - mean) / std
 
+    # Train the model with given data and labels
+    # If pretrained model is used, training for the model is skipped while the temperature scaler is trained
     def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 40):
         X = self._normalize(X)
 
@@ -126,6 +136,7 @@ class BIOT_Model(nn.Module):
         self.scaler = TemperatureScaler().to(self.device)
         self.scaler.fit(logits_val, labels_val)
     
+    # Predict logits for given data
     def predict_logits(self, epoch_data):
         x = self._normalize(epoch_data).astype(np.float32)
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(self.device)
@@ -134,7 +145,8 @@ class BIOT_Model(nn.Module):
         self.eval()
         with torch.no_grad():
             return self.forward(x)[0]
-        
+
+    # Predict probabilities for given data
     def predict_proba(self, epoch_data):
         x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0)
         x = self._normalize(x.numpy()).astype(np.float32)
@@ -148,7 +160,8 @@ class BIOT_Model(nn.Module):
 
             probs = torch.softmax(logits, dim=1)
         return float(probs[0, 1].item())
-    
+
+    # Save the model and scaler
     def save(self, path):
         torch.save({
             "model_state": self.model.state_dict(),
@@ -159,6 +172,7 @@ class BIOT_Model(nn.Module):
             "device": self.device
         }, path)
 
+    # Load a saved model and scaler
     @staticmethod
     def load(path, device = None):
         checkpoint = torch.load(path, map_location = torch.device("cpu"))

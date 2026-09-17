@@ -11,6 +11,10 @@ from models.temperature_scaler import TemperatureScaler
 import copy
 
 class EEGNet_Model:
+    # Initialize the model with:
+    # - n_chans: number of EEG channels input into the model
+    # - n_times: the number of time points in the data (n_times / frequency = duration of input tensor in seconds)
+    # - n_classes: number of output classes
     def __init__(self, n_chans, n_times, n_classes = 2, device = None):
         np.random.seed(50)
         torch.manual_seed(50)
@@ -25,11 +29,13 @@ class EEGNet_Model:
 
         self.scaler = None
 
+    # Normalize data
     def _normalize(self, X):
         mean = X.mean(axis = -1, keepdims = True)
         std = X.std(axis = -1, keepdims = True) + 1e-6
         return (X - mean) / std        
-    
+
+    # Train the model with given data and labels
     def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 40):
         X = self._normalize(X)
 
@@ -113,6 +119,7 @@ class EEGNet_Model:
         self.scaler = TemperatureScaler().to(self.device)
         self.scaler.fit(logits_val, labels_val)
 
+    # Predict probabilities for given data
     def predict_proba(self, epoch_data):
         x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0)
         x = self._normalize(x.numpy()).astype(np.float32)
@@ -129,6 +136,7 @@ class EEGNet_Model:
             probs = torch.softmax(logits, dim = 1)
         return float(probs[0, 1].item())
 
+    # Save the model and scaler
     def save(self, path):
         torch.save({
             "model_state": self.model.state_dict(),
@@ -139,6 +147,7 @@ class EEGNet_Model:
             "n_classes": self.model.n_outputs,
         }, path)
 
+    # Load a saved model and scaler
     @staticmethod
     def load(path, device=None):
         checkpoint = torch.load(path, map_location=torch.device("cpu"))

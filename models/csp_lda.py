@@ -12,18 +12,21 @@ from sklearn.model_selection import train_test_split
 from models.temperature_scaler import TemperatureScaler
 
 class CSP_LDA_Model:
+    # Initialize the model with:
+    # - n_components: number of CSP components to use for LDA (half go to each class)
     def __init__(self, n_components = 6):
         self.n_components = n_components
         self.csp = None
         self.lda = None
         self.scaler = None
 
+    # Normalize data
     def _normalize(self, X):
         mean = X.mean(axis = -1, keepdims = True)
         std = X.std(axis = -1, keepdims = True) + 1e-6
         return (X - mean) / std
 
-    # Training
+    # Train the model with given data and labels
     def fit(self, X, y):
         np.random.seed(50)
         torch.manual_seed(50)
@@ -56,6 +59,7 @@ class CSP_LDA_Model:
         self.scaler = TemperatureScaler().to("cpu")
         self.scaler.fit(logits_t, labels_t)
 
+    # Predict probabilities for given data
     def predict_proba(self, epoch_data):
         X = epoch_data[np.newaxis, :, :]
         X = self._normalize(X)
@@ -76,7 +80,8 @@ class CSP_LDA_Model:
         probs = exp_logits / np.sum(exp_logits)
 
         return float(probs[1])
-    
+
+    # Save the model and scaler
     def save(self, path):
         torch.save({
             "csp": self.csp,
@@ -85,6 +90,7 @@ class CSP_LDA_Model:
             "n_components": self.n_components,
         }, path)
 
+    # Load a saved model and scaler
     @staticmethod
     def load(path):
         import torch.serialization
