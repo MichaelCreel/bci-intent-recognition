@@ -157,14 +157,14 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
         bin_counts.append(len(idx))
 
     plt.figure()
+    perfect_x = np.linspace(0.0, 1.0, 100)
+    perfect_y = np.maximum(perfect_x, 1 - perfect_x)
+    plt.plot(perfect_x, perfect_y, color = "gray", label = "Perfect Calibration")
+
     plt.plot(bin_probs, bin_accs, marker = "o", label = "Model", color = color)
 
     for x, y, n in zip(bin_probs, bin_accs, bin_counts):
         plt.text(x, y + 0.02, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
-
-    perfect_x = np.linspace(0.0, 1.0, 100)
-    perfect_y = np.maximum(perfect_x, 1 - perfect_x)
-    plt.plot(perfect_x, perfect_y, color = "gray", label = "Perfect Calibration")
 
     plt.xlabel("Predicted Probability P(Right Hand) [Left < 0.5]")
     plt.ylabel("Accuracy")
@@ -194,12 +194,12 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
         bin_counts.append(len(idx))
     
     plt.figure()
+    plt.plot([0.5, 1.0], [0.5, 1.0], color = "gray", label = "Perfect Calibration")
+
     plt.plot(bin_confs, bin_accs, marker = "o", label = "Model", color = color)
 
     for x, y, n in zip(bin_confs, bin_accs, bin_counts):
         plt.text(x, y + 0.04, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
-
-    plt.plot([0.5, 1.0], [0.5, 1.0], color = "gray", label = "Perfect Calibration")
 
     plt.xlabel("Confidence Max")
     plt.ylabel("Accuracy")
