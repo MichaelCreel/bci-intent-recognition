@@ -2,12 +2,13 @@
 # BIOT Model with Temperature Scaling
 ################################################################################
 
+import mne
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
-from braindecode.models import BIOT
+from braindecode.models import InterpolatedBIOT as BIOT
 from models.temperature_scaler import TemperatureScaler
 import copy
 
@@ -18,7 +19,7 @@ class BIOT_Model(nn.Module):
     # - n_classes: number of output classes
     # - frequency: sampling frequency of the data
     # - version: load a "pretrained" or "None" model
-    def __init__(self, n_chans = 22, n_times = 256, n_classes = 2, device = None, frequency = 250, version = "None"):
+    def __init__(self, ch_names = None, n_chans = 22, n_times = 256, n_classes = 2, device = None, frequency = 250, version = "None"):
         np.random.seed(50)
         torch.manual_seed(50)
         super().__init__()
@@ -35,11 +36,21 @@ class BIOT_Model(nn.Module):
         # Calculate targeted n_times
         self.target_n_times = int(round(n_times * (self.target_freq / self.orig_freq)))
 
+        if ch_names is None:
+            ch_names = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2']
+
+        # Save channel names to model
+        self.ch_names = ch_names
+
+        # Build channel info
+        info = mne.create_info(ch_names = ch_names, sfreq = self.target_freq, ch_types = 'eeg')
+        info.set_montage('standard_1020')
+
         self.model = BIOT(
-            n_chans = 18,
+            chs_info=info['chs'],
             n_times = self.target_n_times,
             n_outputs = n_classes,
-            sfreq= self.target_freq
+            sfreq= self.target_freq,
         ).to(self.device)
 
         self.pretrained = False
@@ -52,44 +63,7 @@ class BIOT_Model(nn.Module):
 
             self.model.load_state_dict(cleaned_state, strict=False)
 
-    # Resample the frequency to 200 hz
-    def _resample_frequency(self, X):
-        if self.orig_freq == self.target_freq:
-            return X
-
-        n_chans, n_times = X.shape
-
-        duration = n_times / self.orig_freq
-        target_n_times = int(round(duration * self.target_freq))
-
-        old_idx = np.linspace(0, 1, n_times)
-        new_idx = np.linspace(0, 1, target_n_times)
-
-        X_resampled = np.zeros((n_chans, target_n_times), dtype=np.float32)
-        for c in range(n_chans):
-            X_resampled[c] = np.interp(new_idx, old_idx, X[c])
-
-        return X_resampled
-
-    # Resample channels to 18 channels
-    def _resample_channels(self, X):
-        n_chans, n_times = X.shape
-
-        if n_chans == self.target_chans:
-            return X
-
-        old_idx = np.linspace(0, 1, n_chans)
-        new_idx = np.linspace(0, 1, self.target_chans)
-
-        X_resampled = np.zeros((self.target_chans, n_times), dtype=np.float32)
-        for t in range(n_times):
-            X_resampled[:, t] = np.interp(new_idx, old_idx, X[:, t])
-
-        return X_resampled
-
     def _resample_data(self, X):
-        X = self._resample_frequency(X)
-        X = self._resample_channels(X)
         X = self._normalize(X)
         return X
 
@@ -222,9 +196,12 @@ class BIOT_Model(nn.Module):
         torch.save({
             "model_state": self.model.state_dict(),
             "scaler_state": self.scaler.state_dict() if self.scaler else None,
-            "n_chans": self.model.n_chans,
+            "ch_names": self.ch_names,
+            "n_chans": len(self.ch_names) if hasattr(self.model, 'ch_names') and self.ch_names else getattr(self, "orig_n_chans", 18),
             "n_times": self.model.n_times,
             "n_classes": self.model.n_outputs,
+            "frequency": getattr(self, "orig_freq", 250),
+            "version": "pretrained" if self.pretrained else "None",
             "device": self.device
         }, path)
 
@@ -234,9 +211,12 @@ class BIOT_Model(nn.Module):
         checkpoint = torch.load(path, map_location = torch.device("cpu"))
 
         model = BIOT_Model(
-            n_chans = checkpoint["n_chans"],
+            ch_names = checkpoint.get("ch_names", None),
+            n_chans = checkpoint.get("n_chans", 18),
             n_times = checkpoint["n_times"],
             n_classes = checkpoint["n_classes"],
+            frequency = checkpoint.get("frequency", 250),
+            version = checkpoint.get("version", "None"),
             device = device or checkpoint["device"]
         )
 
