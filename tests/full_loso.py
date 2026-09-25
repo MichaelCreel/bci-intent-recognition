@@ -108,10 +108,10 @@ def compute_split_conformal(probs, labels, alpha = 0.1, calib_frac = 0.2, random
     avg_set_size = np.mean(in_set_1.astype(int) + in_set_0.astype(int))
     return empirical_coverage, avg_set_size
 
-def plot_risk_coverage(pooled_results, eval_dir, title="Risk-Coverage Curve"):
+def plot_risk_coverage(pooled_results, eval_dir, title="Risk-Coverage Curve", colors=None):
     plt.figure(figsize=(8, 6))
 
-    for name, data in pooled_results.items():
+    for idx, (name, data) in enumerate(pooled_results.items()):
         probs = np.array(data["probs"])
         labels = np.array(data["labels"])
 
@@ -129,7 +129,8 @@ def plot_risk_coverage(pooled_results, eval_dir, title="Risk-Coverage Curve"):
         for i in range(1, n_samples + 1):
             coverages.append(i / n_samples)
             risks.append(np.mean(errors_sorted[:i]))
-        plt.plot(coverages, risks, label = name, linewidth = 2)
+        color = colors[idx % len(colors)] if colors is not None else "gray"
+        plt.plot(coverages, risks, label = name, linewidth = 2, color=color)
     plt.xlabel("Coverage (Fraction of Accepted Predictions)")
     plt.ylabel("Risk (Error Rate)")
     plt.title(title)
@@ -141,7 +142,7 @@ def plot_risk_coverage(pooled_results, eval_dir, title="Risk-Coverage Curve"):
     figures.append(file_name)
     plt.close()
 
-def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Symmetric Accuracy Diagram"):
+def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Symmetric Accuracy", color = "gray"):
     bins = np.linspace(0.0, 1.0, n_bins + 1)
     preds = (probs > 0.5).astype(int)
     bin_probs, bin_accs = [], []
@@ -154,7 +155,7 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
         bin_accs.append(np.mean(labels[idx] == preds[idx]))
 
     plt.figure()
-    plt.plot(bin_probs, bin_accs, marker = "o", label = "Model")
+    plt.plot(bin_probs, bin_accs, marker = "o", label = "Model", color = color)
 
     perfect_x = np.linspace(0.0, 1.0, 100)
     perfect_y = np.maximum(perfect_x, 1 - perfect_x)
@@ -172,7 +173,7 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
     figures.append(file_name)
     plt.close()
 
-def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title = "Confidence Calibration Diagram"):
+def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title = "Confidence Calibration", color = "gray"):
     confidences = np.maximum(probs, 1 - probs)
     preds = (probs > 0.5).astype(int)
 
@@ -187,7 +188,7 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
         bin_accs.append(np.mean(labels[idx] == preds[idx]))
     
     plt.figure()
-    plt.plot(bin_confs, bin_accs, marker = "o", label = "Model")
+    plt.plot(bin_confs, bin_accs, marker = "o", label = "Model", color = color)
 
     plt.plot([0.5, 1.0], [0.5, 1.0], color = "gray", label = "Perfect Calibration")
 
@@ -203,16 +204,16 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
     figures.append(file_name)
     plt.close()
 
-def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model"):
+def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color = "gray"):
     preds = (probs > 0.5).astype(int)
     wrong = probs[labels != preds]
     title_prefix_safe = title_prefix.replace(" ", "_")
 
     plt.figure()
-    plt.hist(probs, bins = 20, alpha = 0.5, label = "All Predictions")
+    plt.hist(probs, bins = 20, label = "All Predictions", color = color)
     plt.xlabel("Confidence (P of Right Hand)")
     plt.ylabel("Count")
-    plt.title(f"{title_prefix} Confidence Histogram")
+    plt.title(f"{title_prefix} Confidence")
     plt.grid(True)
     file_name_1 = f"{title_prefix_safe}_Confidence_Histogram.png"
     plt.savefig(os.path.join(eval_dir, file_name_1))
@@ -220,10 +221,10 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model"):
     plt.close()
 
     plt.figure()
-    plt.hist(wrong, bins = 20, alpha = 0.7, color = "red", label = "Wrong Predictions")
+    plt.hist(wrong, bins = 20, color = color, label = "Wrong Predictions")
     plt.xlabel("Confidence (P of Right Hand)")
     plt.ylabel("Count")
-    plt.title(f"{title_prefix} Wrong Predictions Confidence Histogram")
+    plt.title(f"{title_prefix} Wrong Predictions")
     plt.grid(True)
     file_name_2 = f"{title_prefix_safe}_Wrong_Predictions_Confidence_Histogram.png"
     plt.savefig(os.path.join(eval_dir, file_name_2))
@@ -236,6 +237,7 @@ def main():
     
     subjects = list(range(1, 10))
     model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (Pre-Trained)"]
+    model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:red"]
     
     # Store per-subject metrics for averaging later
     subject_metrics = {name: [] for name in model_names}
@@ -260,6 +262,8 @@ def main():
         n_chans = X_train.shape[1]
         n_times = X_train.shape[2]
 
+        ch_names = epochs_train.info["ch_names"]
+
         epochs_test, y_test = build_epochs_for_subject(test_subj)
 
         print("Training CSP+LDA model...")
@@ -271,11 +275,11 @@ def main():
         eegnet_model.fit(X_train, y_train)
         
         print("Training BIOT model...")
-        biot_model = BIOT_Model(n_chans = n_chans, n_times = n_times, n_classes = 2)
+        biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2)
         biot_model.fit(X_train, y_train)
 
         print("Training BIOT (Pre-Trained) temperature scaler...")
-        biot_pretrained_model = BIOT_Model(n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained")
+        biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained")
         biot_pretrained_model.fit(X_train, y_train)
 
         for name, model in [
@@ -316,14 +320,14 @@ def main():
             })
 
     # Generate pooled diagrams using full-dataset distribution
-    for name in model_names:
+    for i, name in enumerate(model_names):
         all_probs = np.array(pooled_results[name]["probs"])
         all_labels = np.array(pooled_results[name]["labels"])
-        symmetric_accuracy_diagram(all_probs, all_labels, eval_dir, n_bins=10, title=f"{name} Symmetric Accuracy Diagram")
-        confidence_calibration_diagram(all_probs, all_labels, eval_dir, n_bins=10, title=f"{name} Confidence Calibration Diagram")
-        confidence_histograms(all_probs, all_labels, eval_dir, title_prefix=name)
+        symmetric_accuracy_diagram(all_probs, all_labels, eval_dir, n_bins=10, title=f"{name} Symmetric Accuracy Diagram", color = model_colors[i % len(model_colors)])
+        confidence_calibration_diagram(all_probs, all_labels, eval_dir, n_bins=10, title=f"{name} Confidence Calibration", color = model_colors[i % len(model_colors)])
+        confidence_histograms(all_probs, all_labels, eval_dir, title_prefix=name, color = model_colors[i % len(model_colors)])
 
-    plot_risk_coverage(pooled_results, eval_dir, title="Risk Coverage Curve")
+    plot_risk_coverage(pooled_results, eval_dir, title="Risk Coverage Curve", colors=model_colors)
 
     print("\n==================== Evaluation Summary ====================\n")
 
