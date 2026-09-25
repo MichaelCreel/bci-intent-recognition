@@ -228,6 +228,8 @@ def main():
     n_chans = X_train.shape[1]
     n_times = X_train.shape[2]
 
+    ch_names = epochs_train.info["ch_names"]
+
     print("Loading test subject...")
     epochs_test, y_test = build_epochs_for_subject(test_subject)
 
@@ -259,7 +261,7 @@ def main():
         biot_model = BIOT_Model.load(biot_path)
     else:
         print("Training BIOT model...")
-        biot_model = BIOT_Model(n_chans = n_chans, n_times = n_times, n_classes = 2)
+        biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2)
         biot_model.fit(X_train, y_train, batch_size = 32, lr = 1e-3, n_epochs = 40)
         biot_model.save(biot_path)
         print("BIOT model saved.")
