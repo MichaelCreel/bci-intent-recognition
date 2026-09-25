@@ -6,6 +6,7 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
 import mne
 from moabb.datasets import BNCI2014_001
 from moabb.paradigms import MotorImagery
@@ -145,7 +146,7 @@ def plot_risk_coverage(pooled_results, eval_dir, title="Risk-Coverage Curve", co
 def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Symmetric Accuracy", color = "gray"):
     bins = np.linspace(0.0, 1.0, n_bins + 1)
     preds = (probs > 0.5).astype(int)
-    bin_probs, bin_accs = [], []
+    bin_probs, bin_accs, bin_counts = [], [], []
 
     for i in range(n_bins):
         start, end = bins[i], bins[i + 1]
@@ -153,9 +154,13 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
         if len(idx) == 0: continue
         bin_probs.append(np.mean(probs[idx]))
         bin_accs.append(np.mean(labels[idx] == preds[idx]))
+        bin_counts.append(len(idx))
 
     plt.figure()
     plt.plot(bin_probs, bin_accs, marker = "o", label = "Model", color = color)
+
+    for x, y, n in zip(bin_probs, bin_accs, bin_counts):
+        plt.text(x, y + 0.02, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
 
     perfect_x = np.linspace(0.0, 1.0, 100)
     perfect_y = np.maximum(perfect_x, 1 - perfect_x)
@@ -178,7 +183,7 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
     preds = (probs > 0.5).astype(int)
 
     bins = np.linspace(0.5, 1.0, n_bins + 1)
-    bin_confs, bin_accs = [], []
+    bin_confs, bin_accs, bin_counts = [], [], []
 
     for i in range(n_bins):
         start, end = bins[i], bins[i + 1]
@@ -186,9 +191,13 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
         if len(idx) == 0: continue
         bin_confs.append(np.mean(confidences[idx]))
         bin_accs.append(np.mean(labels[idx] == preds[idx]))
+        bin_counts.append(len(idx))
     
     plt.figure()
     plt.plot(bin_confs, bin_accs, marker = "o", label = "Model", color = color)
+
+    for x, y, n in zip(bin_confs, bin_accs, bin_counts):
+        plt.text(x, y + 0.04, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
 
     plt.plot([0.5, 1.0], [0.5, 1.0], color = "gray", label = "Perfect Calibration")
 
