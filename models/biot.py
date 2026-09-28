@@ -63,10 +63,6 @@ class BIOT_Model(nn.Module):
 
             self.model.load_state_dict(cleaned_state, strict=False)
 
-    def _resample_data(self, X):
-        X = self._normalize(X)
-        return X
-
     # Forward pass through the model
     def forward(self, x):
         return self.model(x)
@@ -86,14 +82,12 @@ class BIOT_Model(nn.Module):
                 if "classifier" not in name and "head" not in name:
                     param.requires_grad = False
 
-        #X = np.array([self._resample_data(x) for x in X_in])
-
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, test_size = 0.2, stratify = y
         )
 
-        X_train = np.array([self._resample_data(x) for x in X_train])
-        X_val = np.array([self._resample_data(x) for x in X_val])
+        X_train = np.array([self._normalize(x) for x in X_train])
+        X_val = np.array([self._normalize(x) for x in X_val])
 
         train_data = TensorDataset(
             torch.tensor(X_train, dtype = torch.float32),
@@ -170,7 +164,7 @@ class BIOT_Model(nn.Module):
     
     # Predict logits for given data
     def predict_logits(self, epoch_data):
-        x = self._resample_data(epoch_data)
+        x = self._normalize(epoch_data)
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(self.device)
 
         self.eval()
@@ -179,7 +173,7 @@ class BIOT_Model(nn.Module):
 
     # Predict probabilities for given data
     def predict_proba(self, epoch_data):
-        x = self._resample_data(epoch_data)
+        x = self._normalize(epoch_data)
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
