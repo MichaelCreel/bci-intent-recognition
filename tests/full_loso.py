@@ -274,7 +274,7 @@ def main():
     eval_dir = os.path.join(PROJECT_ROOT, "figs", "eval")
     os.makedirs(eval_dir, exist_ok=True)
     
-    subjects = list(range(1, 3))
+    subjects = list(range(1, 9))
     model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (Pre-Trained)"]
     model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:red"]
     
