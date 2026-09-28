@@ -11,6 +11,7 @@ import mne
 from moabb.datasets import BNCI2014_001
 from moabb.paradigms import MotorImagery
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import roc_auc_score as ras
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(PROJECT_ROOT)
@@ -240,11 +241,40 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     figures.append(file_name_2)
     plt.close()
 
+def metrics_table(eval_dir, headers, table_data):
+    num_rows = len(table_data)
+    num_cols = len(headers)
+
+    fig, ax = plt.subplots(figsize=(max(12, num_cols * 1.2), num_rows * 0.8 + 1.8))
+    ax.axis("tight")
+    ax.axis("off")
+
+    table = ax.table(cellText = table_data, colLabels = headers, loc = "center", cellLoc = "center")
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1.2, 1.8)
+
+    for key, cell in table.get_celld().items():
+        row, col = key
+        if row == 0:
+            cell.set_facecolor("#2C3E50")
+            cell.get_text().set_color("white")
+            cell.get_text().set_weight("bold")
+        elif row % 2 == 1:
+            cell.set_facecolor("#ECF0F1")
+
+    plt.tight_layout()
+    file_name = "Metrics_Table.png"
+    plt.savefig(os.path.join(eval_dir, file_name))
+    figures.append(file_name)
+    plt.close()
+
 def main():
     eval_dir = os.path.join(PROJECT_ROOT, "figs", "eval")
     os.makedirs(eval_dir, exist_ok=True)
     
-    subjects = list(range(1, 10))
+    subjects = list(range(1, 3))
     model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (Pre-Trained)"]
     model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:red"]
     
@@ -310,6 +340,10 @@ def main():
             s_conf = np.std(probs)
             ece = compute_ece(probs, labels)
             mce = compute_mce(probs, labels)
+            if len(np.unique(labels)) > 1:
+                auroc = ras(labels, probs)
+            else:
+                auroc = np.nan
 
             threshold = 0.75
             accepted = probs >= threshold
@@ -325,7 +359,8 @@ def main():
                 "mce": mce,
                 "accept_rate": accept_rate,
                 "reject_rate": reject_rate,
-                "acc_above": acc_above
+                "acc_above": acc_above,
+                "auroc": auroc
             })
 
     # Generate pooled diagrams using full-dataset distribution
@@ -341,6 +376,7 @@ def main():
     print("\n==================== Evaluation Summary ====================\n")
 
     conformal_alpha = 0.1
+    table_data = []
 
     for name in model_names:
         metrics_list = subject_metrics[name]
@@ -352,6 +388,7 @@ def main():
         avg_mce = np.mean([m["mce"] for m in metrics_list])
         avg_accept = np.mean([m["accept_rate"] for m in metrics_list])
         avg_reject = np.mean([m["reject_rate"] for m in metrics_list])
+        avg_auroc = np.mean([m["auroc"] for m in metrics_list if not np.isnan(m["auroc"])]) if any([not np.isnan(m["auroc"]) for m in metrics_list]) else None
         
         acc_above_vals = [m["acc_above"] for m in metrics_list if not np.isnan(m["acc_above"])]
         avg_acc_above = np.mean(acc_above_vals) if len(acc_above_vals) > 0 else None
@@ -368,12 +405,37 @@ def main():
         print(f"Reject Rate: {avg_reject:.4f}")
         print(f"Empirical Coverage: {emp_cov:.4f}")
         print(f"Average Set Size: {avg_size:.4f}")
+        if avg_auroc is None:
+            print("AUROC: N/A (No valid AUROC across subjects)")
+        else:
+            print(f"AUROC: {avg_auroc:.4f}")
 
         if avg_acc_above is None:
             print("Accuracy Above Threshold: N/A (No accepted predictions across subjects)")
         else:
             print(f"Accuracy Above Threshold: {avg_acc_above:.4f}")
         print()
+
+        row = [
+            name,
+            f"{avg_acc:.4f}",
+            f"{avg_m_conf:.4f}",
+            f"{avg_s_conf:.4f}",
+            f"{avg_ece:.4f}",
+            f"{avg_mce:.4f}",
+            f"{avg_accept:.4f}",
+            f"{avg_reject:.4f}",
+            f"{emp_cov:.4f}",
+            f"{avg_size:.4f}",
+            f"{avg_acc_above:.4f}" if avg_acc_above is not None else "N/A",
+            f"{avg_auroc:.4f}" if avg_auroc is not None else "N/A"
+        ]
+        table_data.append(row)
+
+    headers = [
+        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", "Accept Rate", "Reject Rate", "Empirical Cov.", "Set Size", "Acc. Abv. Thres", "AUROC"
+    ]
+    metrics_table(headers = headers, table_data = table_data, eval_dir = eval_dir)
 
     figures_path = os.path.join(eval_dir, "generated_figs.txt")
     with open(figures_path, "w") as f:

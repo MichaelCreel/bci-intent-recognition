@@ -6,12 +6,5 @@ EEGNet_Symmetric_Accuracy_Diagram.png
 EEGNet_Confidence_Calibration.png
 EEGNet_Confidence_Histogram.png
 EEGNet_Wrong_Predictions_Confidence_Histogram.png
-BIOT_Symmetric_Accuracy_Diagram.png
-BIOT_Confidence_Calibration.png
-BIOT_Confidence_Histogram.png
-BIOT_Wrong_Predictions_Confidence_Histogram.png
-BIOT_(Pre-Trained)_Symmetric_Accuracy_Diagram.png
-BIOT_(Pre-Trained)_Confidence_Calibration.png
-BIOT_(Pre-Trained)_Confidence_Histogram.png
-BIOT_(Pre-Trained)_Wrong_Predictions_Confidence_Histogram.png
 Risk_Coverage_Curve.png
+Metrics_Table.png
