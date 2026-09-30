@@ -53,32 +53,62 @@ def collect_probs_and_labels(model, epochs_test, y_test):
     return np.array(probs), np.array(labels)
 
 def compute_ece(probs, labels, n_bins = 10):
-    bins = np.linspace(0.0, 1.0, n_bins + 1)
+    probs = np.asarray(probs)
+    labels = np.asarray(labels)
+
+    confidences = np.where(probs >= 0.5, probs, 1.0 - probs)
+    preds = (probs >= 0.5).astype(int)
+    accuracies = (preds == labels).astype(float)
+
+    # 0.5 = uncertain, 1.0 = confident
+    bins = np.linspace(0.5, 1.0, n_bins + 1)
     ece = 0.0
-    preds = (probs > 0.5).astype(int)
+    n_samples = len(labels)
 
     for i in range(n_bins):
         start, end = bins[i], bins[i + 1]
-        idx = np.where((probs >= start) & (probs < end))[0]
-        if len(idx) == 0: continue
-        bin_conf = np.mean(probs[idx])
-        bin_acc = np.mean(labels[idx] == preds[idx])
-        ece += (len(idx) / len(probs)) * np.abs(bin_acc - bin_conf)
-    return ece
+        if i == n_bins - 1:
+            idx = np.where((confidences >= start) & (confidences <= end))[0]
+        else:
+            idx = np.where((confidences >= start) & (confidences < end))[0]
+
+        if len(idx) == 0:
+            continue
+
+        bin_conf = np.mean(confidences[idx])
+        bin_acc = np.mean(accuracies[idx])
+
+        ece += (len(idx) / n_samples) * np.abs(bin_acc - bin_conf)
+
+    return float(ece)
 
 def compute_mce(probs, labels, n_bins = 10):
-    bins = np.linspace(0.0, 1.0, n_bins + 1)
-    preds = (probs > 0.5).astype(int)
+    probs = np.asarray(probs)
+    labels = np.asarray(labels)
+
+    confidences = np.where(probs >= 0.5, probs, 1.0 - probs)
+    preds = (probs >= 0.5).astype(int)
+    accuracies = (preds == labels).astype(float)
+
+    bins = np.linspace(0.5, 1.0, n_bins + 1)
     errors = []
 
     for i in range(n_bins):
         start, end = bins[i], bins[i + 1]
-        idx = np.where((probs >= start) & (probs < end))[0]
-        if len(idx) == 0: continue
-        bin_conf = np.mean(probs[idx])
-        bin_acc = np.mean(labels[idx] == preds[idx])
+        if i == n_bins - 1:
+            idx = np.where((confidences >= start) & (confidences <= end))[0]
+        else:
+            idx = np.where((confidences >= start) & (confidences < end))[0]
+
+        if len(idx) == 0:
+            continue
+
+        bin_conf = np.mean(confidences[idx])
+        bin_acc = np.mean(accuracies[idx])
+
         errors.append(np.abs(bin_acc - bin_conf))
-    return max(errors) if errors else 0.0
+
+    return float(np.max(errors)) if len(errors) > 0 else 0.0
 
 def compute_split_conformal(probs, labels, alpha = 0.1, calib_frac = 0.2, random_state = 50):
     np.random.seed(random_state)
@@ -274,7 +304,7 @@ def main():
     eval_dir = os.path.join(PROJECT_ROOT, "figs", "eval")
     os.makedirs(eval_dir, exist_ok=True)
     
-    subjects = list(range(1, 9))
+    subjects = list(range(1, 3))
     model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (Pre-Trained)"]
     model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:red"]
     
@@ -333,11 +363,13 @@ def main():
             pooled_results[name]["probs"].extend(probs)
             pooled_results[name]["labels"].extend(labels)
 
+            confidences = np.maximum(probs, 1 - probs)
+
             # Compute subject-level evaluation metrics
             preds = (probs > 0.5).astype(int)
             acc = accuracy_score(labels, preds)
-            m_conf = np.mean(probs)
-            s_conf = np.std(probs)
+            m_conf = np.mean(confidences)
+            s_conf = np.std(confidences)
             ece = compute_ece(probs, labels)
             mce = compute_mce(probs, labels)
             if len(np.unique(labels)) > 1:
@@ -346,7 +378,7 @@ def main():
                 auroc = np.nan
 
             threshold = 0.75
-            accepted = probs >= threshold
+            accepted = confidences >= threshold
             accept_rate = float(np.mean(accepted))
             reject_rate = float(1.0 - accept_rate)
             acc_above = float(np.mean(labels[accepted] == preds[accepted])) if np.sum(accepted) > 0 else np.nan
