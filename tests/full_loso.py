@@ -202,7 +202,7 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
         labels = ["1.0", "0.5", "0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
     )
 
-    plt.xlabel("<- Left Hand | Right Hand ->\nPredicted Probability Per Hand")
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nPredicted Probability Per Hand")
     plt.ylabel("Accuracy")
     plt.title(title)
     plt.legend()
@@ -256,7 +256,12 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
 
     plt.figure()
     plt.hist(probs, bins = 20, label = "All Predictions", color = color)
-    plt.xlabel("Confidence (P of Right Hand)")
+    plt.xticks(
+        ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
+        labels = ["1.0", "0.5", "0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
+    )
+
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence")
     plt.ylabel("Count")
     plt.title(f"{title_prefix} Confidence")
     plt.grid(True)
@@ -267,7 +272,12 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
 
     plt.figure()
     plt.hist(wrong, bins = 20, color = color, label = "Wrong Predictions")
-    plt.xlabel("Confidence (P of Right Hand)")
+    plt.xticks(
+        ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
+        labels = ["1.0", "0.5", "0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
+    )
+
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence")
     plt.ylabel("Count")
     plt.title(f"{title_prefix} Wrong Predictions")
     plt.grid(True)
@@ -277,6 +287,10 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     plt.close()
 
 def metrics_table(eval_dir, headers, table_data):
+    for row in table_data:
+        if row[0] == "BIOT (Pre-Trained)":
+            row[0] = "BIOT (PT)"
+
     num_rows = len(table_data)
     num_cols = len(headers)
 
