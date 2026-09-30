@@ -197,7 +197,12 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
     for x, y, n in zip(bin_probs, bin_accs, bin_counts):
         plt.text(x, y + 0.02, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
 
-    plt.xlabel("Predicted Probability P(Right Hand) [Left < 0.5]")
+    plt.xticks(
+        ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
+        labels = ["1.0", "0.5", "0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
+    )
+
+    plt.xlabel("<- Left Hand | Right Hand ->\nPredicted Probability Per Hand")
     plt.ylabel("Accuracy")
     plt.title(title)
     plt.legend()
@@ -205,7 +210,7 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
 
     title_safe = title.replace(" ", "_")
     file_name = f"{title_safe}.png"
-    plt.savefig(os.path.join(eval_dir, file_name))
+    plt.savefig(os.path.join(eval_dir, file_name), bbox_inches="tight")
     figures.append(file_name)
     plt.close()
 
@@ -240,7 +245,7 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
 
     title_safe = title.replace(" ", "_")
     file_name = f"{title_safe}.png"
-    plt.savefig(os.path.join(eval_dir, file_name))
+    plt.savefig(os.path.join(eval_dir, file_name), bbox_inches="tight")
     figures.append(file_name)
     plt.close()
 
@@ -256,7 +261,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     plt.title(f"{title_prefix} Confidence")
     plt.grid(True)
     file_name_1 = f"{title_prefix_safe}_Confidence_Histogram.png"
-    plt.savefig(os.path.join(eval_dir, file_name_1))
+    plt.savefig(os.path.join(eval_dir, file_name_1), bbox_inches="tight")
     figures.append(file_name_1)
     plt.close()
 
@@ -267,7 +272,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     plt.title(f"{title_prefix} Wrong Predictions")
     plt.grid(True)
     file_name_2 = f"{title_prefix_safe}_Wrong_Predictions_Confidence_Histogram.png"
-    plt.savefig(os.path.join(eval_dir, file_name_2))
+    plt.savefig(os.path.join(eval_dir, file_name_2), bbox_inches="tight")
     figures.append(file_name_2)
     plt.close()
 
@@ -296,7 +301,7 @@ def metrics_table(eval_dir, headers, table_data):
 
     plt.tight_layout()
     file_name = "Metrics_Table.png"
-    plt.savefig(os.path.join(eval_dir, file_name))
+    plt.savefig(os.path.join(eval_dir, file_name), bbox_inches="tight")
     figures.append(file_name)
     plt.close()
 
@@ -304,7 +309,7 @@ def main():
     eval_dir = os.path.join(PROJECT_ROOT, "figs", "eval")
     os.makedirs(eval_dir, exist_ok=True)
     
-    subjects = list(range(1, 9))
+    subjects = list(range(1, 10))
     model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (Pre-Trained)"]
     model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:red"]
     
@@ -412,6 +417,9 @@ def main():
 
     for name in model_names:
         metrics_list = subject_metrics[name]
+
+        all_probs = np.array(pooled_results[name]["probs"])
+        all_labels = np.array(pooled_results[name]["labels"])
         
         avg_acc = np.mean([m["accuracy"] for m in metrics_list])
         avg_m_conf = np.mean([m["mean_conf"] for m in metrics_list])
