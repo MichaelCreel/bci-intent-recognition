@@ -61,8 +61,8 @@ class CSP_LDA_Model:
 
     # Predict probabilities for given data
     def predict_proba(self, epoch_data):
-        X = epoch_data[np.newaxis, :, :]
-        X = self._normalize(X)
+        X = self._normalize(epoch_data)
+        X = X[np.newaxis, :, :]
 
         # CSP Transform
         X_csp = self.csp.transform(X)
@@ -73,13 +73,13 @@ class CSP_LDA_Model:
 
         # Apply Temperature Scaling
         logits_t = torch.tensor(logits, dtype = torch.float32)
-        scaled_logits = self.scaler(logits_t).detach().numpy()[0]
+        if self.scaler is not None:
+            logits_t = self.scaler(logits_t)
 
         # Softmax
-        exp_logits = np.exp(scaled_logits - np.max(scaled_logits))
-        probs = exp_logits / np.sum(exp_logits)
+        probs = torch.softmax(logits_t, dim = 1)
 
-        return float(probs[1])
+        return float(probs[0, 1].item())
 
     # Save the model and scaler
     def save(self, path):

@@ -167,12 +167,13 @@ class BIOT_Model(nn.Module):
         x = self._normalize(epoch_data)
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(self.device)
 
-        self.eval()
+        self.model.eval()
         with torch.no_grad():
             return self.forward(x)[0]
 
     # Predict probabilities for given data
     def predict_proba(self, epoch_data):
+        self.model.eval()
         x = self._normalize(epoch_data)
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(self.device)
 

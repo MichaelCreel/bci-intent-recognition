@@ -37,12 +37,13 @@ class EEGNet_Model:
 
     # Train the model with given data and labels
     def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 40):
-        X = self._normalize(X)
-
         # Split for calibration
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, test_size = 0.2, stratify = y
         )
+
+        X_train = np.array([self._normalize(x) for x in X_train])
+        X_val = np.array([self._normalize(x) for x in X_val])
 
         # Build dataloaders
         train_data = torch.utils.data.TensorDataset(
@@ -121,9 +122,9 @@ class EEGNet_Model:
 
     # Predict probabilities for given data
     def predict_proba(self, epoch_data):
-        x = torch.tensor(epoch_data, dtype = torch.float32).unsqueeze(0)
-        x = self._normalize(x.numpy()).astype(np.float32)
-        x = torch.tensor(x, dtype = torch.float32).to(self.device)
+        self.model.eval()
+        x = self._normalize(epoch_data)
+        x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
             logits = self.model(x)
