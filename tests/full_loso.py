@@ -370,6 +370,9 @@ def main():
         biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained")
         biot_pretrained_model.fit(X_train, y_train)
 
+        # Threshold for accepted predictions (confidence greater than threshold)
+        threshold = 0.75
+
         for name, model in [
                 ("CSP + LDA", csp_lda_model),
                 ("EEGNet", eegnet_model),
@@ -396,7 +399,6 @@ def main():
             else:
                 auroc = np.nan
 
-            threshold = 0.75
             accepted = confidences >= threshold
             accept_rate = float(np.mean(accepted))
             reject_rate = float(1.0 - accept_rate)
@@ -487,7 +489,7 @@ def main():
         table_data.append(row)
 
     headers = [
-        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", "Accept Rate", "Reject Rate", "Empirical Cov.", "Set Size", "Acc. Abv. Thres", "AUROC"
+        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", "Accept Rate", "Reject Rate", "Empirical Cov.", "Set Size", f"Acc. Abv. {threshold}", "AUROC"
     ]
     metrics_table(headers = headers, table_data = table_data, eval_dir = eval_dir)
 
