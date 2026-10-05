@@ -238,8 +238,8 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
         plt.text(x, y + 0.04, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
 
     plt.xticks(
-        ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
-        labels = ["1.0", "0.5", "0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
+        ticks = [0.5, 0.75, 1.0],
+        labels = ["0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
     )
 
     plt.xlabel("Confidence Max")
@@ -321,13 +321,17 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
         bins = bins,
         label = "Predictions",
         color = color,
-        alpha = 0.5
+        alpha = 0.5,
+        edgecolor = "none",
+        rwidth = 0.95
     )
 
     # Wrong Predictions
     plt.hist(
         wrong,
         bins = bins,
+        edgecolor = "none",
+        rwidth = 0.95,
         label = "Wrong Predictions",
         color = color,
     )
@@ -353,9 +357,10 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
 
     perfect_acc = np.abs(bin_centers - 0.5) + 0.5
 
-    plt.plot(
+    plt.step(
         bin_centers,
         perfect_acc,
+        where = "mid",
         color = "gray",
         label = "Perfect Calibration",
         zorder = 1
@@ -364,8 +369,9 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     plt.bar(
         bin_centers,
         bin_accs,
-        width = (1.0 / len(bin_centers) * 0.99),
+        width = (1.0 / len(bin_centers) * 0.95),
         color = color,
+        edgecolor = "none",
         label = "Bin Accuracy",
         zorder = 2
     )
@@ -465,7 +471,7 @@ def main():
         biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2)
         biot_model.fit(X_train, y_train)
 
-        print("Training BIOT (Pre-Trained) temperature scaler...")
+        print("Training BIOT (Pre-Trained)...")
         biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained")
         biot_pretrained_model.fit(X_train, y_train)
 
@@ -478,6 +484,8 @@ def main():
                 ("BIOT", biot_model),
                 ("BIOT (Pre-Trained)", biot_pretrained_model)
             ]:
+            print(f"Evaluating model {name}...")
+
             probs, labels = collect_probs_and_labels(model, epochs_test, y_test)
             
             # Save raw data for pooled figures
@@ -485,6 +493,8 @@ def main():
             pooled_results[name]["labels"].extend(labels)
 
             confidences = np.maximum(probs, 1 - probs)
+
+            print(f"    Collected {len(probs)} predictions.\n    Collecting metrics...")
 
             # Compute subject-level evaluation metrics
             preds = (probs > 0.5).astype(int)
