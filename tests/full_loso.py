@@ -237,6 +237,11 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
     for x, y, n in zip(bin_confs, bin_accs, bin_counts):
         plt.text(x, y + 0.04, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
 
+    plt.xticks(
+        ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
+        labels = ["1.0", "0.5", "0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
+    )
+
     plt.xlabel("Confidence Max")
     plt.ylabel("Accuracy")
     plt.title(title)
