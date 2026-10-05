@@ -286,6 +286,89 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     figures.append(file_name_2)
     plt.close()
 
+    wrong_mask = (labels != preds)
+    wrong = probs[wrong_mask]
+
+        # 20 bins
+    bins = np.linspace(0.0, 1.0, 21)
+    bin_centers = (bins[:-1] + bins[1:]) / 2
+
+    # Accuracy per bin
+    bin_accs = []
+    for i in range(len(bins) - 1):
+        if i == len(bins) - 2:
+            in_bin = (probs >= bins[i]) & (probs <= bins[i+1])
+        else:
+            in_bin = (probs >= bins[i]) & (probs < bins[i+1])
+
+        count = np.sum(in_bin)
+        if count > 0:
+            acc = np.mean(labels[in_bin] == preds[in_bin])
+            bin_accs.append(acc)
+        else:
+            bin_accs.append(np.nan)
+
+    plt.figure()
+
+    # Total Predictions
+    plt.hist(
+        probs,
+        bins = bins,
+        label = "Predictions",
+        color = color,
+        alpha = 0.5
+    )
+
+    # Wrong Predictions
+    plt.hist(
+        wrong,
+        bins = bins,
+        label = "Wrong Predictions",
+        color = color
+    )
+
+    plt.xticks(
+        ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
+        labels = ["1.0", "0.5", "0.0", "0.5", "1.0"]
+    )
+
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence")
+    plt.ylabel("Count")
+    plt.title(f"{title_prefix} Confidence & Error Distribution")
+    plt.grid(True)
+    plt.legend()
+
+    file_name_1 = f"{title_prefix_safe}_Confidence_and_Error_Distribution.png"
+    plt.savefig(os.path.join(eval_dir, file_name_1), bbox_inches="tight")
+    figures.append(file_name_1)
+    plt.close()
+
+    # Plot Accuracy per Bin
+    plt.figure()
+
+    plt.bar(
+        bin_centers,
+        bin_accs,
+        width = (1.0 / len(bin_centers) * 0.85),
+        color = color,
+        label = "Bin Accuracy"
+    )
+
+    plt.xticks(
+        ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
+        labels = ["1.0", "0.5", "0.0", "0.5", "1.0"]
+    )
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence")
+    plt.ylabel("Accuracy")
+    plt.title(f"{title_prefix} Accuracy per Bin")
+    plt.grid(True)
+    plt.legend()
+
+    file_name_2 = f"{title_prefix_safe}_Accuracy_per_Bin.png"
+    plt.savefig(os.path.join(eval_dir, file_name_2), bbox_inches="tight")
+    figures.append(file_name_2)
+    plt.close()
+
 def metrics_table(eval_dir, headers, table_data):
     for row in table_data:
         if row[0] == "BIOT (Pre-Trained)":
