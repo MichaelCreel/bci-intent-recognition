@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score as ras
 from braindecode.models import InterpolatedBIOT as BIOT
 from models.temperature_scaler import TemperatureScaler
 import copy
@@ -19,12 +20,14 @@ class BIOT_Model(nn.Module):
     # - n_classes: number of output classes
     # - frequency: sampling frequency of the data
     # - version: load a "pretrained" or "None" model
-    def __init__(self, ch_names = None, n_chans = 22, n_times = 256, n_classes = 2, device = None, frequency = 250, version = "None"):
+    # - best_eval: how the best state of the model is decided during training; "loss", "accuracy", "auroc", "ece"
+    def __init__(self, ch_names = None, n_chans = 22, n_times = 256, n_classes = 2, device = None, frequency = 250, version = "None", best_eval = "loss"):
         np.random.seed(50)
         torch.manual_seed(50)
         super().__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.scaler = None
+        self.best_eval = best_eval.lower()
 
         # Save original data information
         self.orig_freq = frequency
@@ -62,6 +65,25 @@ class BIOT_Model(nn.Module):
             cleaned_state = {k.replace("model.", ""): v for k, v in raw_state.items()}
 
             self.model.load_state_dict(cleaned_state, strict=False)
+
+    def _calculate_ece(probs, labels, n_bins = 10):
+        bins = np.linspace(0.0, 1.0, n_bins + 1)
+        ece = 0.0
+        total_samples = len(probs)
+
+        for i in range(n_bins):
+            if i == n_bins - 1:
+                in_bin = (probs >= bins[i]) & (probs <= bins[i+1])
+            else:
+                in_bin = (probs >= bins[i]) & (probs < bins[i+1])
+
+            count = np.sum(in_bin)
+            if count > 0:
+                bin_acc = np.mean(labels[in_bin] == (probs[in_bin] > 0.5).astype(int))
+                bin_conf = np.mean(np.maximum(probs[in_bin], 1 - probs[in_bin]))
+                ece += (count / total_samples) * np.abs(bin_acc - bin_conf)
+
+        return ece
 
     # Forward pass through the model
     def forward(self, x):
@@ -104,7 +126,11 @@ class BIOT_Model(nn.Module):
         optimizer = torch.optim.Adam(self.model.parameters(), lr = lr, weight_decay = 1e-4)
         criterion = nn.CrossEntropyLoss()
 
-        best_val_loss = float("inf")
+        if self.best_eval in ["loss", "ece"]:
+            best_score = float("inf")
+        else:
+            best_score = -float("inf")
+        
         best_state = None
 
         for epoch in range(n_epochs):
@@ -120,8 +146,8 @@ class BIOT_Model(nn.Module):
             # VALIDATION
             self.model.eval()
             val_loss = 0.0
-            correct = 0
-            total = 0
+            val_logits_list = []
+            val_labels_list = []
 
             with torch.no_grad():
                 for xb, yb in val_loader:
@@ -130,16 +156,35 @@ class BIOT_Model(nn.Module):
                     loss = criterion(logits, yb)
                     val_loss += loss.item() * xb.size(0)
 
-                    preds = torch.argmax(logits, dim=1)
-                    correct += (preds == yb).sum().item()
-                    total += yb.size(0)
+                    val_logits_list.append(logits.cpu())
+                    val_labels_list.append(yb.cpu())
 
             val_loss /= len(val_loader.dataset)
-            val_acc = correct / total
+            all_logits = torch.cat(val_logits_list)
+            all_labels = torch.cat(val_labels_list)
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                best_state = copy.deepcopy(self.model.state_dict())
+            all_probs = torch.softmax(all_logits, dim=1)[:, 1].numpy()
+            all_preds = (all_probs > 0.5).astype(int)
+
+            if self.best_eval == "loss":
+                current_score = val_loss
+                improved = current_score < best_score
+            elif self.best_eval == "accuracy":
+                current_score = np.mean(all_preds == all_labels)
+                improved = current_score > best_score
+            elif self.best_eval == "auroc":
+                try:
+                    current_score = ras(all_labels, all_probs)
+                except ValueError:
+                    current_score = 0.5
+                improved = current_score > best_score
+            elif self.best_eval == "ece":
+                current_score = self._calculate_ece(all_probs, all_labels)
+                improved = current_score < best_score
+
+            if improved:
+                best_score = current_score
+                best_state = self.model.state_dict()
 
         if best_state is not None:
             self.model.load_state_dict(best_state)
@@ -197,6 +242,7 @@ class BIOT_Model(nn.Module):
             "n_classes": self.model.n_outputs,
             "frequency": getattr(self, "orig_freq", 250),
             "version": "pretrained" if self.pretrained else "None",
+            "best_eval": self.best_eval,
             "device": self.device
         }, path)
 
@@ -212,6 +258,7 @@ class BIOT_Model(nn.Module):
             n_classes = checkpoint["n_classes"],
             frequency = checkpoint.get("frequency", 250),
             version = checkpoint.get("version", "None"),
+            best_eval = checkpoint.get("best_eval", "loss"),
             device = device or checkpoint["device"]
         )
 
