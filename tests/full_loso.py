@@ -261,7 +261,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
         labels = ["1.0", "0.5", "0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
     )
 
-    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence")
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence Per Hand")
     plt.ylabel("Count")
     plt.title(f"{title_prefix} Confidence")
     plt.grid(True)
@@ -277,7 +277,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
         labels = ["1.0", "0.5", "0.0", "0.5", "1.0"] # Change to 1.0 to 0 to 1.0
     )
 
-    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence")
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence Per Hand")
     plt.ylabel("Count")
     plt.title(f"{title_prefix} Wrong Predictions")
     plt.grid(True)
@@ -324,7 +324,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
         wrong,
         bins = bins,
         label = "Wrong Predictions",
-        color = color
+        color = color,
     )
 
     plt.xticks(
@@ -332,7 +332,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
         labels = ["1.0", "0.5", "0.0", "0.5", "1.0"]
     )
 
-    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence")
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence Per Hand")
     plt.ylabel("Count")
     plt.title(f"{title_prefix} Confidence & Error Distribution")
     plt.grid(True)
@@ -346,19 +346,30 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     # Plot Accuracy per Bin
     plt.figure()
 
+    perfect_acc = np.abs(bin_centers - 0.5) + 0.5
+
+    plt.plot(
+        bin_centers,
+        perfect_acc,
+        color = "gray",
+        label = "Perfect Calibration",
+        zorder = 1
+    )
+
     plt.bar(
         bin_centers,
         bin_accs,
-        width = (1.0 / len(bin_centers) * 0.85),
+        width = (1.0 / len(bin_centers) * 0.99),
         color = color,
-        label = "Bin Accuracy"
+        label = "Bin Accuracy",
+        zorder = 2
     )
 
     plt.xticks(
         ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
         labels = ["1.0", "0.5", "0.0", "0.5", "1.0"]
     )
-    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence")
+    plt.xlabel(r"$\leftarrow$ Left Hand | Right Hand $\rightarrow$" + "\nConfidence Per Hand")
     plt.ylabel("Accuracy")
     plt.title(f"{title_prefix} Accuracy per Bin")
     plt.grid(True)
