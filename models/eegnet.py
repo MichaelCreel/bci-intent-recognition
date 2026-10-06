@@ -7,18 +7,22 @@ import torch
 import torch.nn as nn
 from braindecode.models import EEGNet
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score as ras
 from models.temperature_scaler import TemperatureScaler
 import copy
 
-class EEGNet_Model:
+class EEGNet_Model(nn.Module):
     # Initialize the model with:
     # - n_chans: number of EEG channels input into the model
     # - n_times: the number of time points in the data (n_times / frequency = duration of input tensor in seconds)
     # - n_classes: number of output classes
-    def __init__(self, n_chans, n_times, n_classes = 2, device = None):
+    # - best_eval: how the best state of the model is decided during training; "loss", "accuracy", "auroc", "ece"
+    def __init__(self, n_chans, n_times, n_classes = 2, device = None, best_eval = "loss"):
         np.random.seed(50)
         torch.manual_seed(50)
+        super().__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.best_eval = best_eval.lower()
 
         # EEGNet model
         self.model = EEGNet(
@@ -28,6 +32,30 @@ class EEGNet_Model:
         ).to(self.device)
 
         self.scaler = None
+
+    def _calculate_ece(self, probs, labels, n_bins = 10):
+        if isinstance(n_bins, torch.Tensor):
+            n_bins = int(n_bins.item())
+        else:
+            n_bins = int(n_bins)
+
+        bins = np.linspace(0.0, 1.0, n_bins + 1)
+        ece = 0.0
+        total_samples = len(probs)
+
+        for i in range(n_bins):
+            if i == n_bins - 1:
+                in_bin = (probs >= bins[i]) & (probs <= bins[i+1])
+            else:
+                in_bin = (probs >= bins[i]) & (probs < bins[i+1])
+
+            count = np.sum(in_bin)
+            if count > 0:
+                bin_acc = np.mean(labels[in_bin] == (probs[in_bin] > 0.5).astype(int))
+                bin_conf = np.mean(np.maximum(probs[in_bin], 1 - probs[in_bin]))
+                ece += (count / total_samples) * np.abs(bin_acc - bin_conf)
+
+        return ece
 
     # Normalize data
     def _normalize(self, X):
@@ -62,7 +90,11 @@ class EEGNet_Model:
         optimizer = torch.optim.Adam(self.model.parameters(), lr = lr, weight_decay = 1e-4)
         criterion = nn.CrossEntropyLoss()
 
-        best_val_loss = float("inf")
+        if self.best_eval in ["loss", "ece"]:
+            best_score = float("inf")
+        else:
+            best_score = -float("inf")
+
         best_state = None
 
         # Train model
@@ -79,8 +111,8 @@ class EEGNet_Model:
             # Validation
             self.model.eval()
             val_loss = 0.0
-            correct = 0
-            total = 0
+            val_logits_list = []
+            val_labels_list = []
 
             with torch.no_grad():
                 for xb, yb in val_loader:
@@ -88,14 +120,37 @@ class EEGNet_Model:
                     logits = self.model(xb)
                     loss = criterion(logits, yb)
                     val_loss += loss.item() * xb.size(0)
-                    preds = torch.argmax(logits, dim = 1)
-                    correct += (preds == yb).sum().item()
-                    total += yb.size(0)
+
+                    val_logits_list.append(logits.cpu())
+                    val_labels_list.append(yb.cpu())
 
             val_loss /= len(val_loader.dataset)
+            all_logits = torch.cat(val_logits_list)
+            all_labels = torch.cat(val_labels_list).numpy()
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
+            all_probs = torch.softmax(all_logits, dim=1)[:, 1].numpy()
+            all_preds = (all_probs > 0.5).astype(int)
+
+            if self.best_eval == "loss":
+                current_score = val_loss
+                improved = current_score < best_score
+            elif self.best_eval == "accuracy":
+                current_score = np.mean(all_preds == all_labels)
+                improved = current_score > best_score
+            elif self.best_eval == "auroc":
+                try:
+                    current_score = ras(all_labels, all_probs)
+                except ValueError:
+                    current_score = 0.5
+                improved = current_score > best_score
+            elif self.best_eval == "ece":
+                current_score = self._calculate_ece(all_probs, all_labels)
+                improved = current_score < best_score
+            else:
+                raise ValueError(f"Unknown best_eval criterion: {self.best_eval}")
+
+            if improved:
+                best_score = current_score
                 best_state = copy.deepcopy(self.model.state_dict())
 
         # Load best model state
@@ -146,6 +201,7 @@ class EEGNet_Model:
             "n_times": self.model.n_times,
             "device": self.device,
             "n_classes": self.model.n_outputs,
+            "best_eval": self.best_eval,
         }, path)
 
     # Load a saved model and scaler
@@ -157,7 +213,8 @@ class EEGNet_Model:
             n_chans=checkpoint["n_chans"],
             n_times=checkpoint["n_times"],
             n_classes=checkpoint["n_classes"],
-            device=device or checkpoint["device"]
+            device=device or checkpoint["device"],
+            best_eval=checkpoint.get("best_eval", "loss")
         )
 
         model.model.load_state_dict(checkpoint["model_state"])
