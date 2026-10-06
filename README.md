@@ -28,7 +28,8 @@ PyTorch will be installed with Braindecode, but installing the CUDA based PyTorc
 
 ## Setup
 
-1. Install [Python](https://www.python.org/downloads/). Check "Add Python to PATH" during installation.
+1. Install [Python 3.11+](https://www.python.org/downloads/). Check "Add Python to PATH" during installation.
+    - This project was developed and tested using [Python 3.12.3](https://www.python.org/downloads/release/python-3123/). This version is recommended for reproduction.
 2. Clone the repository.
     ```bash
     git clone https://github.com/MichaelCreel/bci-intent-recognition.git

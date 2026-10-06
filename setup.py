@@ -12,6 +12,16 @@ def run_command(command):
     subprocess.check_call(command)
 
 def main():
+
+    min_python = (3, 11)
+    ins_python = sys.version_info[:2]
+
+    print(f"Found Python {ins_python[0]}.{ins_python[1]}")
+
+    if ins_python < min_python:
+        print(f"Python {min_python[0]}.{min_python[1]} or higher is required.")
+        sys.exit(1)
+
     print(f"Python Version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
     print(f"Working Directory: {os.getcwd()}")
 
@@ -30,23 +40,10 @@ def main():
 
     run_command([venv_python, "-m", "pip", "install", "--upgrade", "pip"])
 
-    # Install packages
-    packages = [
-        "mne",
-        "braindecode",
-        "moabb",
-        "numpy",
-        "matplotlib",
-        "pandas",
-        "scikit-learn",
-        "torch",
-        "autoreject",
-        "transformers",
-    ]
+    requirements_path = os.path.abspath("requirements.txt")
 
-    for package in packages:
-        print(f"Installing Package: {package}")
-        run_command([venv_python, "-m", "pip", "install", package])
+    print(f"Installing packages listed in {requirements_path}")
+    run_command([venv_python, "-m", "pip", "install", "-r", requirements_path])
 
     print("Setup Completed.")
 
