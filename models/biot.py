@@ -66,7 +66,18 @@ class BIOT_Model(nn.Module):
 
             self.model.load_state_dict(cleaned_state, strict=False)
 
-    def _calculate_ece(probs, labels, n_bins = 10):
+    def _calculate_ece(self, probs, labels, n_bins = 10):
+        if isinstance(probs, torch.Tensor):
+            probs = probs.detach().cpu().numpy()
+        if isinstance(labels, torch.Tensor):
+            labels = labels.detach().cpu().numpy()
+        if isinstance(n_bins, torch.Tensor):
+            n_bins = int(n_bins.item())
+        elif hasattr(n_bins, "item"):
+            n_bins = int(n_bins.item())
+        else:
+            n_bins = int(n_bins)
+
         bins = np.linspace(0.0, 1.0, n_bins + 1)
         ece = 0.0
         total_samples = len(probs)
@@ -161,7 +172,7 @@ class BIOT_Model(nn.Module):
 
             val_loss /= len(val_loader.dataset)
             all_logits = torch.cat(val_logits_list)
-            all_labels = torch.cat(val_labels_list)
+            all_labels = torch.cat(val_labels_list).numpy()
 
             all_probs = torch.softmax(all_logits, dim=1)[:, 1].numpy()
             all_preds = (all_probs > 0.5).astype(int)
