@@ -195,7 +195,7 @@ class BIOT_Model(nn.Module):
 
             if improved:
                 best_score = current_score
-                best_state = self.model.state_dict()
+                best_state = copy.deepcopy(self.model.state_dict())
 
         if best_state is not None:
             self.model.load_state_dict(best_state)
