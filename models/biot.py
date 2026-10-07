@@ -53,7 +53,8 @@ class BIOT_Model(nn.Module):
             chs_info=info['chs'],
             n_times = self.target_n_times,
             n_outputs = n_classes,
-            sfreq= self.target_freq,
+            sfreq = self.target_freq,
+            trainable = True
         ).to(self.device)
 
         self.pretrained = False
