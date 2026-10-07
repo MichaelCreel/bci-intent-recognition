@@ -2,42 +2,34 @@
 # Tests the environment to ensure all packages are installed and accessible
 ################################################################################
 
-# Tests that each package can be imported successfully
+import os
+
 def test_environment():
-    mne_success = True
-    braindecode_success = True
-    moabb_success = True
+    requirements_path = os.path.abspath("requirements.txt")
+    success = True
+    packages = open(requirements_path).read().splitlines()
+    failed_packages = []
 
-    try:
-        import mne
-    except ImportError:
-        mne_success = False
-        print("FAILURE: Unsuccessful MNE import")
+    packages = [package.split("==")[0] for package in packages]
 
-    try:
-        import braindecode
-    except ImportError:
-        braindecode_success = False
-        print("FAILURE: Unsuccessful Braindecode import")
-
-    try:
-        import moabb
-    except ImportError:
-        moabb_success = False
-        print("FAILURE: Unsuccessful MOABB import")
-    if (mne_success and braindecode_success and moabb_success):
+    for package in packages:
+        if package == "scikit-learn":
+            package = "sklearn"
+        try:
+            __import__(package)
+        except ImportError:
+            print(f"Failed to import package {package}.")
+            success = False
+            failed_packages.append(package)
+    
+    if success:
         print("All packages imported successfully.")
     else:
-        print("Some packages failed to import:")
-        if not mne_success:
-            print("  - MNE")
-        if not braindecode_success:
-            print("  - Braindecode")
-        if not moabb_success:
-            print("  - MOABB")
+        print("Some packages failed to import.\nFailed packages:")
+        for package in failed_packages:
+            print(f"    - {package}")
         print("Ensure all packages are installed and accessible.")
-        print("    - Ensure the environment is activated")
-        print("    - Ensure that all dependencies are installed")
+        print("Ensure the environment is activated.")
 
 if __name__ == "__main__":
     test_environment()
