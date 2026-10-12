@@ -74,12 +74,7 @@ Tests ensure that your environment is set up and functioning correctly
     python3 ./tests/moabb_test.py
     ```
 
-- `eegnet_test.py` attempts to utilize an EEGNet model to ensure that EEGNet models can be used in the environment.
-    ```bash
-    python3 ./tests/eegnet_test.py
-    ```
-
-- `models_test.py` imports models from the models folder, tests them, and trains them on sample motor imagery subjects to compare their performance.
+- `models_test.py` imports models used in the directory to ensure they are accessible.
     ```bash
     python3 ./tests/models_test.py
     ```
