@@ -4,6 +4,7 @@
 
 import os
 import sys
+import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
@@ -427,6 +428,25 @@ def metrics_table(eval_dir, headers, table_data):
 def main():
     eval_dir = os.path.join(PROJECT_ROOT, "figs", "eval")
     os.makedirs(eval_dir, exist_ok=True)
+    previous_dir = os.path.join(eval_dir, "previous")
+    os.makedirs(previous_dir, exist_ok=True)
+    moved_files = 0
+
+    for file in os.listdir(eval_dir):
+        src = os.path.join(eval_dir, file)
+
+        if src == previous_dir:
+            continue
+
+        if os.path.isfile(src):
+            dst = os.path.join(previous_dir, file)
+            if os.path.exists(dst):
+                os.remove(dst)
+            shutil.move(src, dst)
+            moved_files += 1
+
+    if moved_files > 0:
+        print(f"Moved {moved_files} files from figs/eval to figs/eval/previous.")
     
     subjects = list(range(1, 10))
     model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (Pre-Trained)"]
