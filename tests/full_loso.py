@@ -394,7 +394,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
 
 def metrics_table(eval_dir, headers, table_data):
     for row in table_data:
-        if row[0] == "BIOT (Pre-Trained)":
+        if row[0] == "BIOT (Pre-Trained, RS)":
             row[0] = "BIOT (PT)"
 
     num_rows = len(table_data)
@@ -449,8 +449,8 @@ def main():
         print(f"Moved {moved_files} files from figs/eval to figs/eval/previous.")
     
     subjects = list(range(1, 10))
-    model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (Pre-Trained)"]
-    model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:red"]
+    model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (RS)", "BIOT (Pre-Trained, RS)"]
+    model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:green", "tab:red"]
     
     # Store per-subject metrics for averaging later
     subject_metrics = {name: [] for name in model_names}
@@ -488,11 +488,15 @@ def main():
         eegnet_model.fit(X_train, y_train)
         
         print("Training BIOT model...")
-        biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2)
+        biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, resample = False)
         biot_model.fit(X_train, y_train)
 
+        print("Training BIOT (RS) model...")
+        biot_rs_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, resample = True)
+        biot_rs_model.fit(X_train, y_train)
+
         print("Training BIOT (Pre-Trained)...")
-        biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained")
+        biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained", resample = True)
         biot_pretrained_model.fit(X_train, y_train)
 
         # Threshold for accepted predictions (confidence greater than threshold)
@@ -502,7 +506,8 @@ def main():
                 ("CSP + LDA", csp_lda_model),
                 ("EEGNet", eegnet_model),
                 ("BIOT", biot_model),
-                ("BIOT (Pre-Trained)", biot_pretrained_model)
+                ("BIOT (RS)", biot_rs_model),
+                ("BIOT (Pre-Trained, RS)", biot_pretrained_model)
             ]:
             print(f"Evaluating model {name}...")
 
