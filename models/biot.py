@@ -2,6 +2,7 @@
 # BIOT Model with Temperature Scaling
 ################################################################################
 
+import matplotlib.pyplot as plt
 import mne
 import numpy as np
 import torch
@@ -21,14 +22,17 @@ class BIOT_Model(nn.Module):
     # - frequency: sampling frequency of the data
     # - version: load a "pretrained" or "None" model
     # - best_eval: how the best state of the model is decided during training; "loss", "accuracy", "auroc", "ece"
-    def __init__(self, ch_names = None, n_chans = 22, n_times = 256, n_classes = 2, device = None, frequency = 250, version = "None", best_eval = "loss"):
+    # - resample: whether to resample training and input data to the proper frequency for BIOT
+    # - display_resample: whether to display a plot of the first channel before and after resampling
+    def __init__(self, ch_names = None, n_chans = 22, n_times = 256, n_classes = 2, device = None, frequency = 250, version = "None", best_eval = "loss", resample = False, display_resample = False):
         np.random.seed(50)
         torch.manual_seed(50)
         super().__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.scaler = None
         self.best_eval = best_eval.lower()
-
+        self.resample = resample
+        self.display_resample = display_resample
         # Save original data information
         self.orig_freq = frequency
         self.orig_n_chans = n_chans
@@ -67,6 +71,54 @@ class BIOT_Model(nn.Module):
 
             self.model.load_state_dict(cleaned_state, strict=False)
 
+    # Resample a single epoch to the target frequency
+    def _resample_epoch(self, epoch_data):
+        if not self.resample:
+            return epoch_data
+        info = mne.create_info(
+            ch_names = self.ch_names,
+            sfreq = self.orig_freq,
+            ch_types = 'eeg'
+        )
+        epoch_data = epoch_data[np.newaxis, :, :]
+
+        epochs = mne.EpochsArray(
+            epoch_data,
+            info,
+            verbose = False
+        )
+
+        epochs.resample(self.target_freq)
+
+        if self.display_resample:
+            # Compare first channel before/after resampling
+            original = epoch_data[0, 0, :]          # Channel 0 before resampling
+            resampled = epochs.get_data()[0, 0, :]  # Channel 0 after resampling
+
+            plt.plot(
+                np.arange(len(original)) / self.orig_freq,
+                original,
+                label="Original",
+                alpha=0.8
+            )
+
+            plt.plot(
+                np.arange(len(resampled)) / self.target_freq,
+                resampled,
+                label="Resampled",
+                alpha=0.8
+            )
+
+            plt.xlabel("Time (s)")
+            plt.ylabel("Amplitude")
+            plt.title("Channel 0 Before and After Resampling")
+            plt.legend()
+
+            plt.tight_layout()
+            plt.show(block=True)
+
+        return epochs.get_data()[0]
+    
     def _calculate_ece(self, probs, labels, n_bins = 10):
         if isinstance(probs, torch.Tensor):
             probs = probs.detach().cpu().numpy()
@@ -110,6 +162,9 @@ class BIOT_Model(nn.Module):
     # Train the model with given data and labels
     # If pretrained model is used, training for the model is skipped while the temperature scaler is trained
     def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 40):
+        # Resample training data
+        X = np.array([self._resample_epoch(x) for x in X])
+
         if self.pretrained:
             lr = lr / 100
             for name, param in self.model.named_parameters():
@@ -221,6 +276,7 @@ class BIOT_Model(nn.Module):
     
     # Predict logits for given data
     def predict_logits(self, epoch_data):
+        epoch_data = self._resample_epoch(epoch_data)
         x = self._normalize(epoch_data)
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(self.device)
 
@@ -230,6 +286,8 @@ class BIOT_Model(nn.Module):
 
     # Predict probabilities for given data
     def predict_proba(self, epoch_data):
+        epoch_data = self._resample_epoch(epoch_data)
+
         self.model.eval()
         x = self._normalize(epoch_data)
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0).to(self.device)
@@ -255,6 +313,8 @@ class BIOT_Model(nn.Module):
             "frequency": getattr(self, "orig_freq", 250),
             "version": "pretrained" if self.pretrained else "None",
             "best_eval": self.best_eval,
+            "resample": self.resample,
+            "display_resample": self.display_resample,
             "device": self.device
         }, path)
 
@@ -271,7 +331,9 @@ class BIOT_Model(nn.Module):
             frequency = checkpoint.get("frequency", 250),
             version = checkpoint.get("version", "None"),
             best_eval = checkpoint.get("best_eval", "loss"),
-            device = device or checkpoint["device"]
+            device = device or checkpoint["device"],
+            resample = checkpoint.get("resample", True),
+            display_resample = checkpoint.get("display_resample", False)
         )
 
         model.model.load_state_dict(checkpoint["model_state"])
