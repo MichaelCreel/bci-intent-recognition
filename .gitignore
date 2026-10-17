@@ -14,3 +14,4 @@ figs/eval/*.png
 models/__pycache__/
 models/*.pt
 figs/eval/previous/
+models/training_metrics/

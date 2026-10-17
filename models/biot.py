@@ -3,6 +3,7 @@
 ################################################################################
 
 import matplotlib.pyplot as plt
+import os
 import mne
 import numpy as np
 import torch
@@ -161,7 +162,9 @@ class BIOT_Model(nn.Module):
 
     # Train the model with given data and labels
     # If pretrained model is used, training for the model is skipped while the temperature scaler is trained
-    def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 40):
+    # save_dir: directory to save the training metrics plot, unsaved if None
+    # name: name of the model to be prepended to the training metrics plot
+    def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 40, save_dir = None, name = "biot model"):
         # Resample training data
         X = np.array([self._resample_epoch(x) for x in X])
 
@@ -200,8 +203,18 @@ class BIOT_Model(nn.Module):
         
         best_state = None
 
+        metric_history = {
+            "train_loss": [],
+            "val_loss": [],
+            "val_accuracy": [],
+            "val_auroc": [],
+            "val_ece": []
+        }
+        best_epoch = 0
+
         for epoch in range(n_epochs):
             self.model.train()
+            train_loss = 0.0
             for xb, yb in train_loader:
                 xb, yb = xb.to(self.device), yb.to(self.device)
                 optimizer.zero_grad()
@@ -209,6 +222,7 @@ class BIOT_Model(nn.Module):
                 loss = criterion(logits, yb)
                 loss.backward()
                 optimizer.step()
+                train_loss += loss.item() * xb.size(0)
 
             # VALIDATION
             self.model.eval()
@@ -233,6 +247,19 @@ class BIOT_Model(nn.Module):
             all_probs = torch.softmax(all_logits, dim=1)[:, 1].numpy()
             all_preds = (all_probs > 0.5).astype(int)
 
+            val_accuracy = np.mean(all_preds == all_labels)
+            try:
+                val_auroc = ras(all_labels, all_probs)
+            except ValueError:
+                val_auroc = 0.5
+            val_ece = self._calculate_ece(all_probs, all_labels)
+
+            metric_history["train_loss"].append(train_loss / len(train_loader.dataset))
+            metric_history["val_loss"].append(val_loss)
+            metric_history["val_accuracy"].append(val_accuracy)
+            metric_history["val_auroc"].append(val_auroc)
+            metric_history["val_ece"].append(val_ece)
+
             if self.best_eval == "loss":
                 current_score = val_loss
                 improved = current_score < best_score
@@ -252,6 +279,7 @@ class BIOT_Model(nn.Module):
             if improved:
                 best_score = current_score
                 best_state = copy.deepcopy(self.model.state_dict())
+                best_epoch = epoch + 1
 
         if best_state is not None:
             self.model.load_state_dict(best_state)
@@ -273,6 +301,52 @@ class BIOT_Model(nn.Module):
 
         self.scaler = TemperatureScaler().to(self.device)
         self.scaler.fit(logits_val, labels_val)
+
+        if save_dir is not None:
+            epochs = range(1, len(metric_history["train_loss"]) + 1)
+            fig, axes = plt.subplots(2, 2, figsize = (12, 10))
+
+            # Plot loss
+            axes[0, 0].plot(epochs, metric_history["train_loss"], label = "Train Loss")
+            axes[0, 0].plot(epochs, metric_history["val_loss"], label = "Validation Loss")
+            axes[0, 0].axvline(best_epoch, color = "red", linestyle = "--", label = "Selected Epoch")
+            axes[0, 0].set_title("Loss")
+            axes[0, 0].set_xlabel("Epoch")
+            axes[0, 0].set_ylabel("Loss")
+            axes[0, 0].legend()
+
+            # Plot accuracy
+            axes[0, 1].plot(epochs, metric_history["val_accuracy"], label = "Validation Accuracy")
+            axes[0, 1].axvline(best_epoch, color = "red", linestyle = "--", label = "Selected Epoch")
+            axes[0, 1].set_title("Validation Accuracy")
+            axes[0, 1].set_xlabel("Epoch")
+            axes[0, 1].set_ylabel("Accuracy")
+            axes[0, 1].legend()
+
+            # Plot AUROC
+            axes[1, 0].plot(epochs, metric_history["val_auroc"], label = "Validation AUROC")
+            axes[1, 0].axvline(best_epoch, color = "red", linestyle = "--", label = "Selected Epoch")
+            axes[1, 0].set_title("Validation AUROC")
+            axes[1, 0].set_xlabel("Epoch")
+            axes[1, 0].set_ylabel("AUROC")
+            axes[1, 0].legend()
+
+            # Plot ECE
+            axes[1, 1].plot(epochs, metric_history["val_ece"], label = "Validation ECE")
+            axes[1, 1].axvline(best_epoch, color = "red", linestyle = "--", label = "Selected Epoch")
+            axes[1, 1].set_title("Validation ECE")
+            axes[1, 1].set_xlabel("Epoch")
+            axes[1, 1].set_ylabel("ECE")
+            axes[1, 1].legend()
+
+            plt.suptitle(f"{name} Training Metrics [{self.best_eval.upper()}]")
+            plt.tight_layout()
+
+            # Save training plot
+            os.makedirs(save_dir, exist_ok = True)
+            safe_name = name.replace(" ", "_").lower()
+            plt.savefig(os.path.join(save_dir, f"{safe_name}_training_metrics.png"))
+            plt.close()
     
     # Predict logits for given data
     def predict_logits(self, epoch_data):
@@ -331,6 +405,7 @@ class BIOT_Model(nn.Module):
             frequency = checkpoint.get("frequency", 250),
             version = checkpoint.get("version", "None"),
             best_eval = checkpoint.get("best_eval", "loss"),
+            pretrained = checkpoint.get("pretrained", False),
             device = device or checkpoint["device"],
             resample = checkpoint.get("resample", True),
             display_resample = checkpoint.get("display_resample", False)
