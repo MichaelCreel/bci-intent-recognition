@@ -484,8 +484,8 @@ def main():
         csp_lda_model.fit(X_train, y_train)
         
         print("Training EEGNet model...")
-        eegnet_model = EEGNet_Model(n_chans = n_chans, n_times = n_times, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/eegnet", name = f"EEGNet Leave {test_subj}")
-        eegnet_model.fit(X_train, y_train)
+        eegnet_model = EEGNet_Model(n_chans = n_chans, n_times = n_times)
+        eegnet_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/eegnet", name = f"EEGNet Leave {test_subj}")
         
         print("Training BIOT model...")
         biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, resample = False)
