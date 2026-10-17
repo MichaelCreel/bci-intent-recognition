@@ -405,7 +405,6 @@ class BIOT_Model(nn.Module):
             frequency = checkpoint.get("frequency", 250),
             version = checkpoint.get("version", "None"),
             best_eval = checkpoint.get("best_eval", "loss"),
-            pretrained = checkpoint.get("pretrained", False),
             device = device or checkpoint["device"],
             resample = checkpoint.get("resample", True),
             display_resample = checkpoint.get("display_resample", False)
