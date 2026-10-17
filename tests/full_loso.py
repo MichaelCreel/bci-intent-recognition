@@ -489,15 +489,15 @@ def main():
         
         print("Training BIOT model...")
         biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, resample = False)
-        biot_model.fit(X_train, y_train)
+        biot_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot", name = f"BIOT Leave {test_subj}")
 
         print("Training BIOT (RS) model...")
         biot_rs_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, resample = True)
-        biot_rs_model.fit(X_train, y_train)
+        biot_rs_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_rs", name = f"BIOT (RS) Leave {test_subj}")
 
-        print("Training BIOT (Pre-Trained)...")
+        print("Training BIOT (Pre-Trained, RS) model...")
         biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained", resample = True)
-        biot_pretrained_model.fit(X_train, y_train)
+        biot_pretrained_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_pretrained_rs", name = f"BIOT (Pre-Trained, RS) Leave {test_subj}")
 
         # Threshold for accepted predictions (confidence greater than threshold)
         threshold = 0.75
