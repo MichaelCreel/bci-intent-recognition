@@ -1,5 +1,5 @@
 ################################################################################
-# BIOT Model with Temperature Scaling
+# Interpolated BIOT Model with Temperature Scaling
 ################################################################################
 
 import matplotlib.pyplot as plt
@@ -34,15 +34,22 @@ class BIOT_Model(nn.Module):
         self.best_eval = best_eval.lower()
         self.resample = resample
         self.display_resample = display_resample
+
         # Save original data information
         self.orig_freq = frequency
+        if version == "pretrained":
+            self.target_freq = 200
+            self.target_n_times = 256
+        elif resample:
+            self.target_freq = 200
+            # Calculate targeted n_times
+            self.target_n_times = int(round(n_times * (self.target_freq / self.orig_freq)))
+        else:
+            self.target_freq = frequency
+            self.target_n_times = n_times
+
         self.orig_n_chans = n_chans
-
-        self.target_freq = 200
         self.target_chans = 18
-
-        # Calculate targeted n_times
-        self.target_n_times = int(round(n_times * (self.target_freq / self.orig_freq)))
 
         if ch_names is None:
             ch_names = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2']
@@ -54,23 +61,22 @@ class BIOT_Model(nn.Module):
         info = mne.create_info(ch_names = ch_names, sfreq = self.target_freq, ch_types = 'eeg')
         info.set_montage('standard_1020')
 
-        self.model = BIOT(
-            chs_info=info['chs'],
-            n_times = self.target_n_times,
-            n_outputs = n_classes,
-            sfreq = self.target_freq,
-            trainable = True
-        ).to(self.device)
-
         self.pretrained = False
         if version == "pretrained":
             self.pretrained = True
-            state = torch.load("models/EEG-six-datasets-18-channels.ckpt", map_location="cpu")
-
-            raw_state = state
-            cleaned_state = {k.replace("model.", ""): v for k, v in raw_state.items()}
-
-            self.model.load_state_dict(cleaned_state, strict=False)
+            self.model = BIOT.from_pretrained(
+                "braindecode/biot-pretrained-six-datasets-18chs",
+                chs_info = info['chs'],
+                n_outputs = n_classes,
+            ).to(self.device)
+        else:
+            self.model = BIOT(
+                chs_info=info['chs'],
+                n_times = self.target_n_times,
+                n_outputs = n_classes,
+                sfreq = self.target_freq,
+                trainable = True
+            ).to(self.device)
 
     # Resample a single epoch to the target frequency
     def _resample_epoch(self, epoch_data):
@@ -161,7 +167,7 @@ class BIOT_Model(nn.Module):
         return (X - mean) / std
 
     # Train the model with given data and labels
-    # If pretrained model is used, training for the model is skipped while the temperature scaler is trained
+    # If pretrained model is used, the classifier head and the temperature scaler are trained
     # save_dir: directory to save the training metrics plot, unsaved if None
     # name: name of the model to be prepended to the training metrics plot
     def fit(self, X, y, batch_size = 32, lr = 1e-3, n_epochs = 40, save_dir = None, name = "biot model"):
