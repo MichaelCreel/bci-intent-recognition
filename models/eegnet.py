@@ -178,7 +178,7 @@ class EEGNet_Model(nn.Module):
             if improved:
                 best_score = current_score
                 best_state = copy.deepcopy(self.model.state_dict())
-                best_epoch = epoch
+                best_epoch = epoch + 1
 
         # Load best model state
         if best_state is not None:
