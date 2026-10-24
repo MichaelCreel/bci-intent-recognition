@@ -15,3 +15,6 @@ models/__pycache__/
 models/*.pt
 figs/eval/previous/
 models/training_metrics/
+sync.sh
+sync_run.sh
+output.log

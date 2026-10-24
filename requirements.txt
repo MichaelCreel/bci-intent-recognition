@@ -6,3 +6,4 @@ braindecode==1.8.1
 moabb==1.5.0
 mne==1.12.1
 autoreject==0.4.4
+braindecode[hub]
