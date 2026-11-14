@@ -47,7 +47,7 @@ PyTorch will be installed with Braindecode, but installing the CUDA based PyTorc
     ```Cmd
     python setup.py
     ```
-5. Activate the virtual environment.
+5. Activate the virtual environment.  
     MacOS/Linux:
     ```bash
     source ./bci-env/bin/activate
