@@ -2,7 +2,7 @@
 
 This project evaluates the performance of machine learning and artificial intelligence models for recognizing user intent from EEG data. The performance of models is evaluated based on accuracy, confidence, and calibration of the dataset to determine which model is most suitable for application of measuring EEG activity. This is evaluated by forcing models to predict classes based on EEG activity, and then comparing the predictions to the correct class labels.
 
-This project includes several models that were tested on BCI Competition IV - Dataset 2a EEG data to determine the best model for this project. These models are evaluated on accuracy, accuracy variance, confidence, and confidence variance to determine the best model for a safety application. The best model will be applied to a drone control application and used in real-time to determine the confidence of user flight actions. The three models tested for this application are:
+This project includes several models that were tested on BCI Competition IV - Dataset 2a EEG data to determine the best model for this project. These models are evaluated on accuracy, accuracy variance, confidence, and confidence variance to determine the best model for a safety application. The three models tested for this application are:
 
 - CSP + LDA Pipeline
 - EEGNet
@@ -47,7 +47,7 @@ PyTorch will be installed with Braindecode, but installing the CUDA based PyTorc
     ```Cmd
     python setup.py
     ```
-5. Activate the virtual environment.
+5. Activate the virtual environment.  
     MacOS/Linux:
     ```bash
     source ./bci-env/bin/activate

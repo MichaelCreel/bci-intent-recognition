@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score as ras
-from braindecode.models import InterpolatedBIOT as BIOT
+from braindecode.models import BIOT
 from models.temperature_scaler import TemperatureScaler
 import copy
 
@@ -37,10 +37,7 @@ class BIOT_Model(nn.Module):
 
         # Save original data information
         self.orig_freq = frequency
-        if version == "pretrained":
-            self.target_freq = 200
-            self.target_n_times = 256
-        elif resample:
+        if resample:
             self.target_freq = 200
             # Calculate targeted n_times
             self.target_n_times = int(round(n_times * (self.target_freq / self.orig_freq)))
@@ -61,6 +58,9 @@ class BIOT_Model(nn.Module):
         info = mne.create_info(ch_names = ch_names, sfreq = self.target_freq, ch_types = 'eeg')
         info.set_montage('standard_1020')
 
+        if version == "pretrained":
+            self.target_freq = 200
+
         self.pretrained = False
         if version == "pretrained":
             self.pretrained = True
@@ -68,6 +68,8 @@ class BIOT_Model(nn.Module):
                 "braindecode/biot-pretrained-six-datasets-18chs",
                 chs_info = info['chs'],
                 n_outputs = n_classes,
+                channel_strategy = "source",
+                channel_strategy_kwargs = {"trainable": True}
             ).to(self.device)
         else:
             self.model = BIOT(
@@ -75,7 +77,8 @@ class BIOT_Model(nn.Module):
                 n_times = self.target_n_times,
                 n_outputs = n_classes,
                 sfreq = self.target_freq,
-                trainable = True
+                channel_strategy = "source",
+                channel_strategy_kwargs = {"trainable": True}
             ).to(self.device)
 
     # Resample a single epoch to the target frequency
