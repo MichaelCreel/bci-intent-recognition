@@ -68,7 +68,8 @@ class BIOT_Model(nn.Module):
                 "braindecode/biot-pretrained-six-datasets-18chs",
                 chs_info = info['chs'],
                 n_outputs = n_classes,
-                channel_strategy = "spline"
+                channel_strategy = "source",
+                channel_strategy_kwargs = {"trainable": True}
             ).to(self.device)
         else:
             self.model = BIOT(
@@ -76,7 +77,8 @@ class BIOT_Model(nn.Module):
                 n_times = self.target_n_times,
                 n_outputs = n_classes,
                 sfreq = self.target_freq,
-                channel_strategy = "spline"
+                channel_strategy = "source",
+                channel_strategy_kwargs = {"trainable": True}
             ).to(self.device)
 
     # Resample a single epoch to the target frequency
