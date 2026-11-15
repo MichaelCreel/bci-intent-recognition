@@ -169,7 +169,6 @@ class AXON_Model(nn.Module):
         X = np.array([self._resample_epoch(x) for x in X])
 
         if self.pretrained:
-            lr = lr / 100
             for name, param in self.model.named_parameters():
                 if "final_layer" not in name:
                     param.requires_grad = False
@@ -178,8 +177,8 @@ class AXON_Model(nn.Module):
             X, y, test_size = 0.2, stratify = y
         )
 
-        X_train = np.array([self._resample_epoch(x) for x in X_train])
-        X_val = np.array([self._resample_epoch(x) for x in X_val])
+        X_train = np.array([self._normalize(x) for x in X_train])
+        X_val = np.array([self._normalize(x) for x in X_val])
 
         train_data = TensorDataset(
             torch.tensor(X_train, dtype=torch.float32),
