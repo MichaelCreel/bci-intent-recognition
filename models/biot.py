@@ -178,7 +178,6 @@ class BIOT_Model(nn.Module):
         X = np.array([self._resample_epoch(x) for x in X])
 
         if self.pretrained:
-            lr = lr / 100
             for name, param in self.model.named_parameters():
                 if "classifier" not in name and "head" not in name:
                     param.requires_grad = False
