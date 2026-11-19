@@ -506,7 +506,7 @@ def main():
         biot_pretrained_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_pretrained_rs", name = f"BIOT (Pre-Trained, RS) Leave {test_subj}")
 
         print("Training AXON model...")
-        axon_model = AXON_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained", resample = True)
+        axon_model = AXON_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
         axon_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/axon", name = f"AXON Leave {test_subj}")
 
         # Threshold for accepted predictions (confidence greater than threshold)
