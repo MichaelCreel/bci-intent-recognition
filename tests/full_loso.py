@@ -624,17 +624,17 @@ def main():
             f"{avg_s_conf:.4f}",
             f"{avg_ece:.4f}",
             f"{avg_mce:.4f}",
-            f"{avg_accept:.4f}",
-            f"{avg_reject:.4f}",
+            f"{avg_acc_above:.4f}" if avg_acc_above is not None else "N/A",
+            f"{avg_accept:.4f}", # Acceptance rate is threshold coverage
+            f"{avg_reject:.4f}", # Reject rate is lost coverage from threshold
             f"{emp_cov:.4f}",
             f"{avg_size:.4f}",
-            f"{avg_acc_above:.4f}" if avg_acc_above is not None else "N/A",
             f"{avg_auroc:.4f}" if avg_auroc is not None else "N/A"
         ]
         table_data.append(row)
 
     headers = [
-        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", "Accept Rate", "Reject Rate", "Empirical Cov.", "Set Size", f"Acc. Abv. {threshold}", "AUROC"
+        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", f"Acc. Abv. {threshold}", "Thres. Cov.", "Reject Rate", "Empirical Cov.", "Set Size", "AUROC"
     ]
     metrics_table(headers = headers, table_data = table_data, eval_dir = eval_dir)
 
