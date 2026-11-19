@@ -28,5 +28,11 @@ BIOT_(Pre-Trained,_RS)_Confidence_Histogram.png
 BIOT_(Pre-Trained,_RS)_Wrong_Predictions_Confidence_Histogram.png
 BIOT_(Pre-Trained,_RS)_Confidence_and_Error_Distribution.png
 BIOT_(Pre-Trained,_RS)_Accuracy_per_Bin.png
+AXON_Symmetric_Accuracy_Diagram.png
+AXON_Confidence_Calibration.png
+AXON_Confidence_Histogram.png
+AXON_Wrong_Predictions_Confidence_Histogram.png
+AXON_Confidence_and_Error_Distribution.png
+AXON_Accuracy_per_Bin.png
 Risk_Coverage_Curve.png
 Metrics_Table.png

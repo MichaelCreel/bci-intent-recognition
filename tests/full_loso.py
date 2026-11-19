@@ -20,6 +20,7 @@ sys.path.append(PROJECT_ROOT)
 from models.csp_lda import CSP_LDA_Model
 from models.eegnet import EEGNet_Model
 from models.biot import BIOT_Model
+from models.axon import AXON_Model
 
 figures = []
 
@@ -114,8 +115,12 @@ def compute_mce(probs, labels, n_bins = 10):
 def compute_split_conformal(probs, labels, alpha = 0.1, calib_frac = 0.2, random_state = 50):
     np.random.seed(random_state)
     n_samples = len(labels)
+
     indices = np.random.permutation(n_samples)
     n_calib = int(n_samples * calib_frac)
+
+    if n_calib == 0:
+        return np.nan, np.nan
 
     calib_idx = indices[:n_calib]
     test_idx = indices[n_calib:]
@@ -449,8 +454,8 @@ def main():
         print(f"Moved {moved_files} files from figs/eval to figs/eval/previous.")
     
     subjects = list(range(1, 10))
-    model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (RS)", "BIOT (Pre-Trained, RS)"]
-    model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:green", "tab:red"]
+    model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (RS)", "BIOT (Pre-Trained, RS)", "AXON"]
+    model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:green", "tab:red", "tab:brown"]
     
     # Store per-subject metrics for averaging later
     subject_metrics = {name: [] for name in model_names}
@@ -475,6 +480,7 @@ def main():
         n_chans = X_train.shape[1]
         n_times = X_train.shape[2]
 
+        sfreq = epochs_train.info["sfreq"]
         ch_names = epochs_train.info["ch_names"]
 
         epochs_test, y_test = build_epochs_for_subject(test_subj)
@@ -488,16 +494,20 @@ def main():
         eegnet_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/eegnet", name = f"EEGNet Leave {test_subj}")
         
         print("Training BIOT model...")
-        biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, resample = False)
+        biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = False)
         biot_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot", name = f"BIOT Leave {test_subj}")
 
         print("Training BIOT (RS) model...")
-        biot_rs_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, resample = True)
+        biot_rs_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = True)
         biot_rs_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_rs", name = f"BIOT (RS) Leave {test_subj}")
 
         print("Training BIOT (Pre-Trained, RS) model...")
-        biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, version = "pretrained", resample = True)
+        biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
         biot_pretrained_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_pretrained_rs", name = f"BIOT (Pre-Trained, RS) Leave {test_subj}")
+
+        print("Training AXON model...")
+        axon_model = AXON_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
+        axon_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/axon", name = f"AXON Leave {test_subj}")
 
         # Threshold for accepted predictions (confidence greater than threshold)
         threshold = 0.75
@@ -507,7 +517,8 @@ def main():
                 ("EEGNet", eegnet_model),
                 ("BIOT", biot_model),
                 ("BIOT (RS)", biot_rs_model),
-                ("BIOT (Pre-Trained, RS)", biot_pretrained_model)
+                ("BIOT (Pre-Trained, RS)", biot_pretrained_model),
+                ("AXON", axon_model)
             ]:
             print(f"Evaluating model {name}...")
 
@@ -613,17 +624,17 @@ def main():
             f"{avg_s_conf:.4f}",
             f"{avg_ece:.4f}",
             f"{avg_mce:.4f}",
-            f"{avg_accept:.4f}",
-            f"{avg_reject:.4f}",
+            f"{avg_acc_above:.4f}" if avg_acc_above is not None else "N/A",
+            f"{avg_accept:.4f}", # Acceptance rate is threshold coverage
+            f"{avg_reject:.4f}", # Reject rate is lost coverage from threshold
             f"{emp_cov:.4f}",
             f"{avg_size:.4f}",
-            f"{avg_acc_above:.4f}" if avg_acc_above is not None else "N/A",
             f"{avg_auroc:.4f}" if avg_auroc is not None else "N/A"
         ]
         table_data.append(row)
 
     headers = [
-        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", "Accept Rate", "Reject Rate", "Empirical Cov.", "Set Size", f"Acc. Abv. {threshold}", "AUROC"
+        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", f"Acc. Abv. {threshold}", "Thres. Cov.", "Reject Rate", "Empirical Cov.", "Set Size", "AUROC"
     ]
     metrics_table(headers = headers, table_data = table_data, eval_dir = eval_dir)
 

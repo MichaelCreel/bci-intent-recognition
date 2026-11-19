@@ -169,17 +169,16 @@ class AXON_Model(nn.Module):
         X = np.array([self._resample_epoch(x) for x in X])
 
         if self.pretrained:
-            lr = lr / 100
             for name, param in self.model.named_parameters():
-                if "classifier" not in name and "head" not in name:
+                if "final_layer" not in name:
                     param.requires_grad = False
 
         X_train, X_val, y_train, y_val = train_test_split(
             X, y, test_size = 0.2, stratify = y
         )
 
-        X_train = np.array([self._resample_epoch(x) for x in X_train])
-        X_val = np.array([self._resample_epoch(x) for x in X_val])
+        X_train = np.array([self._normalize(x) for x in X_train])
+        X_val = np.array([self._normalize(x) for x in X_val])
 
         train_data = TensorDataset(
             torch.tensor(X_train, dtype=torch.float32),
@@ -196,7 +195,7 @@ class AXON_Model(nn.Module):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss()
 
-        if self.beste_eval in ["loss", "ece"]:
+        if self.best_eval in ["loss", "ece"]:
             best_score = float("inf")
         else:
             best_score = -float("inf")
@@ -210,7 +209,7 @@ class AXON_Model(nn.Module):
             "val_auroc": [],
             "val_ece": []
         }
-        beset_epoch = 0
+        best_epoch = 0
 
         for epoch in range(n_epochs):
             self.model.train()
@@ -224,7 +223,7 @@ class AXON_Model(nn.Module):
                 optimizer.step()
                 train_loss += loss.item() * xb.size(0)
 
-            # Validation
+            # VALIDATION
             self.model.eval()
             val_loss = 0.0
             val_logits_list = []
@@ -236,8 +235,9 @@ class AXON_Model(nn.Module):
                     logits = self.model(xb)
                     loss = criterion(logits, yb)
                     val_loss += loss.item() * xb.size(0)
-                    val_logits_list.append(logits)
-                    val_labels_list.append(yb)
+
+                    val_logits_list.append(logits.cpu())
+                    val_labels_list.append(yb.cpu())
 
             val_loss /= len(val_loader.dataset)
             all_logits = torch.cat(val_logits_list)
@@ -289,7 +289,7 @@ class AXON_Model(nn.Module):
 
         self.model.eval()
         with torch.no_grad():
-            for xb, yb in train_loader:
+            for xb, yb in val_loader:
                 xb, yb = xb.to(self.device), yb.to(self.device)
                 logits = self.model(xb)
                 logits_list.append(logits.cpu())
