@@ -289,7 +289,7 @@ class AXON_Model(nn.Module):
 
         self.model.eval()
         with torch.no_grad():
-            for xb, yb in train_loader:
+            for xb, yb in val_loader:
                 xb, yb = xb.to(self.device), yb.to(self.device)
                 logits = self.model(xb)
                 logits_list.append(logits.cpu())
