@@ -581,14 +581,26 @@ def main():
 
         all_probs = np.array(pooled_results[name]["probs"])
         all_labels = np.array(pooled_results[name]["labels"])
+
+        def mean_and_std(query):
+            values = [m[query] for m in metrics_list]
+            if len(values) == 0:
+                return None, None
+            return float(np.mean(values)), float(np.std(values))
         
-        avg_acc = np.mean([m["accuracy"] for m in metrics_list])
-        avg_m_conf = np.mean([m["mean_conf"] for m in metrics_list])
-        avg_s_conf = np.mean([m["std_conf"] for m in metrics_list])
-        avg_ece = np.mean([m["ece"] for m in metrics_list])
-        avg_mce = np.mean([m["mce"] for m in metrics_list])
-        avg_accept = np.mean([m["accept_rate"] for m in metrics_list])
-        avg_reject = np.mean([m["reject_rate"] for m in metrics_list])
+        avg_acc, std_acc = mean_and_std("accuracy")
+        avg_m_conf, std_m_conf = mean_and_std("mean_conf")
+        avg_s_conf, std_s_conf = mean_and_std("std_conf")
+        avg_ece, std_ece = mean_and_std("ece")
+        avg_mce, std_mce = mean_and_std("mce")
+        avg_accept, std_accept = mean_and_std("accept_rate")
+        avg_reject, std_reject = mean_and_std("reject_rate")
+        avg_m_conf, std_m_conf = mean_and_std("mean_conf")
+        avg_s_conf, std_s_conf = mean_and_std("std_conf")
+        avg_ece, std_ece = mean_and_std("ece")
+        avg_mce, std_mce = mean_and_std("mce")
+        avg_accept, std_accept = mean_and_std("accept_rate")
+        avg_reject, std_reject = mean_and_std("reject_rate")
         avg_auroc = np.mean([m["auroc"] for m in metrics_list if not np.isnan(m["auroc"])]) if any([not np.isnan(m["auroc"]) for m in metrics_list]) else None
         
         acc_above_vals = [m["acc_above"] for m in metrics_list if not np.isnan(m["acc_above"])]
@@ -596,14 +608,14 @@ def main():
         emp_cov, avg_size = compute_split_conformal(all_probs, all_labels, alpha=conformal_alpha)
 
         print(f"=== {name} ===")
-        print(f"Accuracy: {avg_acc:.4f}")
-        print(f"Mean Confidence: {avg_m_conf:.4f}")
-        print(f"Std Confidence: {avg_s_conf:.4f}")
-        print(f"Expected Calibration Error (ECE): {avg_ece:.4f}")
-        print(f"Maximum Calibration Error (MCE): {avg_mce:.4f}")
+        print(f"Accuracy: {avg_acc:.4f} \u00B1 {std_acc:.4f}")
+        print(f"Mean Confidence: {avg_m_conf:.4f} \u00B1 {std_m_conf:.4f}")
+        print(f"Std Confidence: {avg_s_conf:.4f} \u00B1 {std_s_conf:.4f}")
+        print(f"Expected Calibration Error (ECE): {avg_ece:.4f} \u00B1 {std_ece:.4f}")
+        print(f"Maximum Calibration Error (MCE): {avg_mce:.4f} \u00B1 {std_mce:.4f}")
         print(f"Safety Threshold: 0.75")
-        print(f"Acceptance Rate: {avg_accept:.4f}")
-        print(f"Reject Rate: {avg_reject:.4f}")
+        print(f"Acceptance Rate: {avg_accept:.4f} \u00B1 {std_accept:.4f}")
+        print(f"Reject Rate: {avg_reject:.4f} \u00B1 {std_reject:.4f}")
         print(f"Empirical Coverage: {emp_cov:.4f}")
         print(f"Average Set Size: {avg_size:.4f}")
         if avg_auroc is None:
@@ -619,14 +631,14 @@ def main():
 
         row = [
             name,
-            f"{avg_acc:.4f}",
-            f"{avg_m_conf:.4f}",
-            f"{avg_s_conf:.4f}",
-            f"{avg_ece:.4f}",
-            f"{avg_mce:.4f}",
+            f"{avg_acc:.4f} \pm {std_acc:.4f}",
+            f"{avg_m_conf:.4f} \pm {std_m_conf:.4f}",
+            f"{avg_s_conf:.4f} \pm {std_s_conf:.4f}",
+            f"{avg_ece:.4f} \pm {std_ece:.4f}",
+            f"{avg_mce:.4f} \pm {std_mce:.4f}",
             f"{avg_acc_above:.4f}" if avg_acc_above is not None else "N/A",
-            f"{avg_accept:.4f}", # Acceptance rate is threshold coverage
-            f"{avg_reject:.4f}", # Reject rate is lost coverage from threshold
+            f"{avg_accept:.4f} \pm {std_accept:.4f}", # Acceptance rate is threshold coverage
+            f"{avg_reject:.4f} \pm {std_reject:.4f}", # Reject rate is lost coverage from threshold
             f"{emp_cov:.4f}",
             f"{avg_size:.4f}",
             f"{avg_auroc:.4f}" if avg_auroc is not None else "N/A"
