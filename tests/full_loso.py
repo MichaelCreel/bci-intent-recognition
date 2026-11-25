@@ -43,6 +43,11 @@ def build_epochs_for_subject(subject_id):
     info.set_montage(montage)
     
     epochs = mne.EpochsArray(X, info, verbose=False)
+    print(f"Subject {subject_id} distribution:")
+    left_count = np.sum(y_int == 0)
+    right_count = np.sum(y_int == 1)
+    print(f"    - Left Hand (0): {left_count}")
+    print(f"    - Right Hand (1): {right_count}")
     return epochs, y_int
 
 def collect_probs_and_labels(model, epochs_test, y_test):
