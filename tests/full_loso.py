@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 import mne
+import json
 from moabb.datasets import BNCI2014_001
 from moabb.paradigms import MotorImagery
 from sklearn.metrics import accuracy_score
@@ -458,7 +459,7 @@ def main():
     if moved_files > 0:
         print(f"Moved {moved_files} files from figs/eval to figs/eval/previous.")
     
-    subjects = list(range(1, 10))
+    subjects = list(range(1, 3))
     model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (RS)", "BIOT (Pre-Trained, RS)", "AXON"]
     model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:green", "tab:red", "tab:brown"]
     
@@ -468,103 +469,151 @@ def main():
     # Store pooled outputs across all subjects for plot generation
     pooled_results = {name: {"probs": [], "labels": []} for name in model_names}
 
-    for test_subj in subjects:
-        print(f"\nRunning Test Subject {test_subj}")
-        training_subjects = [s for s in subjects if s != test_subj]
+    # Find objects for json file
+    def find_json_objects(obj):
+        if isinstance(obj, dict):
+            return {k: find_json_objects(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [find_json_objects(item) for item in obj]
+        elif isinstance(obj, np.ndarray):
+            return find_json_objects(obj.tolist())
+        elif isinstance(obj, (np.floating, float)):
+            val = float(obj)
+            return None if np.isnan(val) else val
+        elif isinstance(obj, (np.integer, int)):
+            val = int(obj)
+            return val
+        return obj
 
-        train_epochs_list, train_labels_list = [], []
-        for subj in training_subjects:
-            epochs, labels = build_epochs_for_subject(subj)
-            train_epochs_list.append(epochs)
-            train_labels_list.append(labels)
+    data_save_folder = os.path.join(PROJECT_ROOT, "data", "full_loso")
+    data_save_path = os.path.join(data_save_folder, "results.json")
 
-        epochs_train = mne.concatenate_epochs(train_epochs_list)
-        y_train = np.concatenate(train_labels_list)
-        X_train = epochs_train.get_data()
-        
-        n_chans = X_train.shape[1]
-        n_times = X_train.shape[2]
+    # Threshold for accepted predictions (confidence greater than threshold)
+    threshold = 0.75
 
-        sfreq = epochs_train.info["sfreq"]
-        ch_names = epochs_train.info["ch_names"]
+    # Run full evaluation if not recreating graphs
+    if "--recreate-graphs" not in sys.argv:
+        for test_subj in subjects:
+            print(f"\nRunning Test Subject {test_subj}")
+            training_subjects = [s for s in subjects if s != test_subj]
 
-        epochs_test, y_test = build_epochs_for_subject(test_subj)
+            train_epochs_list, train_labels_list = [], []
+            for subj in training_subjects:
+                epochs, labels = build_epochs_for_subject(subj)
+                train_epochs_list.append(epochs)
+                train_labels_list.append(labels)
 
-        print("Training CSP+LDA model...")
-        csp_lda_model = CSP_LDA_Model(n_components = 4)
-        csp_lda_model.fit(X_train, y_train)
-        
-        print("Training EEGNet model...")
-        eegnet_model = EEGNet_Model(n_chans = n_chans, n_times = n_times)
-        eegnet_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/eegnet", name = f"EEGNet Leave {test_subj}")
-        
-        print("Training BIOT model...")
-        biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = False)
-        biot_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot", name = f"BIOT Leave {test_subj}")
-
-        print("Training BIOT (RS) model...")
-        biot_rs_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = True)
-        biot_rs_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_rs", name = f"BIOT (RS) Leave {test_subj}")
-
-        print("Training BIOT (Pre-Trained, RS) model...")
-        biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
-        biot_pretrained_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_pretrained_rs", name = f"BIOT (Pre-Trained, RS) Leave {test_subj}")
-
-        print("Training AXON model...")
-        axon_model = AXON_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
-        axon_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/axon", name = f"AXON Leave {test_subj}")
-
-        # Threshold for accepted predictions (confidence greater than threshold)
-        threshold = 0.75
-
-        for name, model in [
-                ("CSP + LDA", csp_lda_model),
-                ("EEGNet", eegnet_model),
-                ("BIOT", biot_model),
-                ("BIOT (RS)", biot_rs_model),
-                ("BIOT (Pre-Trained, RS)", biot_pretrained_model),
-                ("AXON", axon_model)
-            ]:
-            print(f"Evaluating model {name}...")
-
-            probs, labels = collect_probs_and_labels(model, epochs_test, y_test)
+            epochs_train = mne.concatenate_epochs(train_epochs_list)
+            y_train = np.concatenate(train_labels_list)
+            X_train = epochs_train.get_data()
             
-            # Save raw data for pooled figures
-            pooled_results[name]["probs"].extend(probs)
-            pooled_results[name]["labels"].extend(labels)
+            n_chans = X_train.shape[1]
+            n_times = X_train.shape[2]
 
-            confidences = np.maximum(probs, 1 - probs)
+            sfreq = epochs_train.info["sfreq"]
+            ch_names = epochs_train.info["ch_names"]
 
-            print(f"    Collected {len(probs)} predictions.\n    Collecting metrics...")
+            epochs_test, y_test = build_epochs_for_subject(test_subj)
 
-            # Compute subject-level evaluation metrics
-            preds = (probs > 0.5).astype(int)
-            acc = accuracy_score(labels, preds)
-            m_conf = np.mean(confidences)
-            s_conf = np.std(confidences)
-            ece = compute_ece(probs, labels)
-            mce = compute_mce(probs, labels)
-            if len(np.unique(labels)) > 1:
-                auroc = ras(labels, probs)
-            else:
-                auroc = np.nan
+            print("Training CSP+LDA model...")
+            csp_lda_model = CSP_LDA_Model(n_components = 4)
+            csp_lda_model.fit(X_train, y_train)
+            
+            # print("Training EEGNet model...")
+            # eegnet_model = EEGNet_Model(n_chans = n_chans, n_times = n_times)
+            # eegnet_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/eegnet", name = f"EEGNet Leave {test_subj}")
+            
+            # print("Training BIOT model...")
+            # biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = False)
+            # biot_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot", name = f"BIOT Leave {test_subj}")
 
-            accepted = confidences >= threshold
-            accept_rate = float(np.mean(accepted))
-            reject_rate = float(1.0 - accept_rate)
-            acc_above = float(np.mean(labels[accepted] == preds[accepted])) if np.sum(accepted) > 0 else np.nan
+            # print("Training BIOT (RS) model...")
+            # biot_rs_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = True)
+            # biot_rs_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_rs", name = f"BIOT (RS) Leave {test_subj}")
 
-            subject_metrics[name].append({
-                "accuracy": acc,
-                "mean_conf": m_conf,
-                "std_conf": s_conf,
-                "ece": ece,
-                "mce": mce,
-                "accept_rate": accept_rate,
-                "reject_rate": reject_rate,
-                "acc_above": acc_above,
-                "auroc": auroc
-            })
+            # print("Training BIOT (Pre-Trained, RS) model...")
+            # biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
+            # biot_pretrained_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_pretrained_rs", name = f"BIOT (Pre-Trained, RS) Leave {test_subj}")
+
+            # print("Training AXON model...")
+            # axon_model = AXON_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
+            # axon_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/axon", name = f"AXON Leave {test_subj}")
+
+            for name, model in [
+                    ("CSP + LDA", csp_lda_model),
+                    # ("EEGNet", eegnet_model),
+                    # ("BIOT", biot_model),
+                    # ("BIOT (RS)", biot_rs_model),
+                    # ("BIOT (Pre-Trained, RS)", biot_pretrained_model),
+                    # ("AXON", axon_model)
+                ]:
+                print(f"Evaluating model {name}...")
+
+                probs, labels = collect_probs_and_labels(model, epochs_test, y_test)
+                
+                # Save raw data for pooled figures
+                pooled_results[name]["probs"].extend(probs)
+                pooled_results[name]["labels"].extend(labels)
+
+                confidences = np.maximum(probs, 1 - probs)
+
+                print(f"    Collected {len(probs)} predictions.\n    Collecting metrics...")
+
+                # Compute subject-level evaluation metrics
+                preds = (probs > 0.5).astype(int)
+                acc = accuracy_score(labels, preds)
+                m_conf = np.mean(confidences)
+                s_conf = np.std(confidences)
+                ece = compute_ece(probs, labels)
+                mce = compute_mce(probs, labels)
+                if len(np.unique(labels)) > 1:
+                    auroc = ras(labels, probs)
+                else:
+                    auroc = np.nan
+
+                accepted = confidences >= threshold
+                accept_rate = float(np.mean(accepted))
+                reject_rate = float(1.0 - accept_rate)
+                acc_above = float(np.mean(labels[accepted] == preds[accepted])) if np.sum(accepted) > 0 else np.nan
+
+                subject_metrics[name].append({
+                    "accuracy": acc,
+                    "mean_conf": m_conf,
+                    "std_conf": s_conf,
+                    "ece": ece,
+                    "mce": mce,
+                    "accept_rate": accept_rate,
+                    "reject_rate": reject_rate,
+                    "acc_above": acc_above,
+                    "auroc": auroc
+                })
+
+        # Save the results to Full LOSO data
+        os.makedirs(data_save_folder, exist_ok=True)
+        payload = {
+            "subject_metrics": find_json_objects(subject_metrics),
+            "pooled_results": find_json_objects(pooled_results)
+        }
+        with open(data_save_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent = 2)
+    # Recreate graphs if flagged
+    else:
+        print("Skipped re-evaluation. Creating graphs...")
+        try:
+            with open(data_save_path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+        except Exception as e:
+            print(f"Failed to load evaluation data: {e}")
+            raise e
+
+        subject_metrics = {
+            model_name: [
+                {k: (np.nan if v is None else v) for k, v in subj_dict.items()} for subj_dict in folds
+            ]
+            for model_name, folds in payload["subject_metrics"].items()
+        }
+        pooled_results = payload["pooled_results"]
+
 
     # Generate pooled diagrams using full-dataset distribution
     for i, name in enumerate(model_names):
@@ -613,16 +662,17 @@ def main():
         emp_cov, avg_size = compute_split_conformal(all_probs, all_labels, alpha=conformal_alpha)
 
         print(f"=== {name} ===")
-        print(f"Accuracy: {avg_acc:.4f} \u00B1 {std_acc:.4f}")
-        print(f"Mean Confidence: {avg_m_conf:.4f} \u00B1 {std_m_conf:.4f}")
-        print(f"Std Confidence: {avg_s_conf:.4f} \u00B1 {std_s_conf:.4f}")
-        print(f"Expected Calibration Error (ECE): {avg_ece:.4f} \u00B1 {std_ece:.4f}")
-        print(f"Maximum Calibration Error (MCE): {avg_mce:.4f} \u00B1 {std_mce:.4f}")
-        print(f"Safety Threshold: 0.75")
-        print(f"Acceptance Rate: {avg_accept:.4f} \u00B1 {std_accept:.4f}")
-        print(f"Reject Rate: {avg_reject:.4f} \u00B1 {std_reject:.4f}")
-        print(f"Empirical Coverage: {emp_cov:.4f}")
-        print(f"Average Set Size: {avg_size:.4f}")
+        print(f"Accuracy: {avg_acc:.4f}" if avg_acc is not None else "N/A" + f" \u00B1 {std_acc:.4f}" if std_acc is not None else "\u00B1 N/A")
+        print(f"Mean Confidence: {avg_m_conf:.4f}" if avg_m_conf is not None else "N/A" + f" \u00B1 {std_m_conf:.4f}" if std_m_conf is not None else "\u00B1 N/A")
+        print(f"Std Confidence: {avg_s_conf:.4f}" if avg_s_conf is not None else "N/A" + f" \u00B1 {std_s_conf:.4f}" if std_s_conf is not None else "\u00B1 N/A")
+        print(f"Expected Calibration Error (ECE): {avg_ece:.4f}" if avg_ece is not None else "N/A" + f" \u00B1 {std_ece:.4f}" if std_ece is not None else "\u00B1 N/A")
+        print(f"Expected Calibration Error (ECE): {avg_ece:.4f}" if avg_ece is not None and std_ece is not None else "N/A \u00B1 N/A")
+        print(f"Maximum Calibration Error (MCE): {avg_mce:.4f}" if avg_mce is not None else "N/A" + f" \u00B1 {std_mce:.4f}" if std_mce is not None else "\u00B1 N/A")
+        print(f"Safety Threshold: {threshold:.2f}")
+        print(f"Acceptance Rate: {avg_accept:.4f}" if avg_accept is not None else "N/A" + f" \u00B1 {std_accept:.4f}" if std_accept is not None else "\u00B1 N/A")
+        print(f"Reject Rate: {avg_reject:.4f}" if avg_reject is not None else "N/A" + f" \u00B1 {std_reject:.4f}" if std_reject is not None else "\u00B1 N/A")
+        print(f"Empirical Coverage: {emp_cov:.4f}" if emp_cov is not None else "N/A")
+        print(f"Average Set Size: {avg_size:.4f}" if avg_size is not None else "N/A")
         if avg_auroc is None:
             print("AUROC: N/A (No valid AUROC across subjects)")
         else:
@@ -636,22 +686,22 @@ def main():
 
         row = [
             name,
-            f"{avg_acc:.4f} \pm {std_acc:.4f}",
-            f"{avg_m_conf:.4f} \pm {std_m_conf:.4f}",
-            f"{avg_s_conf:.4f} \pm {std_s_conf:.4f}",
-            f"{avg_ece:.4f} \pm {std_ece:.4f}",
-            f"{avg_mce:.4f} \pm {std_mce:.4f}",
+            rf"{avg_acc:.4f}" if avg_acc is not None else "N/A" + rf" \u00B1 {std_acc:.4f}" if std_acc is not None else "\u00B1 N/A",
+            rf"{avg_s_conf:.4f}" if avg_s_conf is not None else "N/A" + rf" \u00B1 {std_s_conf:.4f}" if std_s_conf is not None else "\u00B1 N/A",
+            rf"{avg_s_conf:.4f}" if avg_s_conf is not None else "N/A" + rf" \u00B1 {std_s_conf:.4f}" if std_s_conf is not None else "\u00B1 N/A",
+            rf"{avg_ece:.4f}" if avg_ece is not None else "N/A" + rf" \u00B1 {std_ece:.4f}" if std_ece is not None else "\u00B1 N/A",
+            rf"{avg_mce:.4f}" if avg_mce is not None else "N/A" + rf" \u00B1 {std_mce:.4f}" if std_mce is not None else "\u00B1 N/A",
             f"{avg_acc_above:.4f}" if avg_acc_above is not None else "N/A",
-            f"{avg_accept:.4f} \pm {std_accept:.4f}", # Acceptance rate is threshold coverage
-            f"{avg_reject:.4f} \pm {std_reject:.4f}", # Reject rate is lost coverage from threshold
-            f"{emp_cov:.4f}",
-            f"{avg_size:.4f}",
+            rf"{avg_accept:.4f}" if avg_accept is not None else "N/A" + rf" \u00B1 {std_accept:.4f}" if std_accept is not None else "\u00B1 N/A", # Acceptance rate is threshold coverage
+            rf"{avg_reject:.4f}" if avg_reject is not None else "N/A" + rf" \u00B1 {std_reject:.4f}" if std_reject is not None else "\u00B1 N/A", # Reject rate is lost coverage from threshold
+            f"{emp_cov:.4f}" if emp_cov is not None else "N/A",
+            f"{avg_size:.4f}" if avg_size is not None else "N/A",
             f"{avg_auroc:.4f}" if avg_auroc is not None else "N/A"
         ]
         table_data.append(row)
 
     headers = [
-        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", f"Acc. Abv. {threshold}", "Thres. Cov.", "Reject Rate", "Empirical Cov.", "Set Size", "AUROC"
+        "Model", "Accuracy", "Mean Conf.", "Std. Conf.", "ECE", "MCE", f"Acc. Abv. {threshold:.2f}", "Thres. Cov.", "Reject Rate", "Empirical Cov.", "Set Size", "AUROC"
     ]
     metrics_table(headers = headers, table_data = table_data, eval_dir = eval_dir)
 
