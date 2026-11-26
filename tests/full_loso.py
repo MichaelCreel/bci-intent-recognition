@@ -153,7 +153,7 @@ def compute_split_conformal(probs, labels, alpha = 0.1, calib_frac = 0.2, random
     return empirical_coverage, avg_set_size
 
 def plot_risk_coverage(pooled_results, eval_dir, title="Risk-Coverage Curve", colors=None):
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(7, 5))
 
     for idx, (name, data) in enumerate(pooled_results.items()):
         probs = np.array(data["probs"])
@@ -199,7 +199,7 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
         bin_accs.append(np.mean(labels[idx] == preds[idx]))
         bin_counts.append(len(idx))
 
-    plt.figure()
+    plt.figure(figsize=(7, 5))
     perfect_x = np.linspace(0.0, 1.0, 100)
     perfect_y = np.maximum(perfect_x, 1 - perfect_x)
     plt.plot(perfect_x, perfect_y, color = "gray", label = "Perfect Calibration")
@@ -207,7 +207,7 @@ def symmetric_accuracy_diagram(probs, labels, eval_dir, n_bins = 10, title = "Sy
     plt.plot(bin_probs, bin_accs, marker = "o", label = "Model", color = color)
 
     for x, y, n in zip(bin_probs, bin_accs, bin_counts):
-        plt.text(x, y + 0.02, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
+        plt.text(x, y + 0.02, f"{n}", fontsize = 11, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
 
     plt.xticks(
         ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
@@ -241,13 +241,13 @@ def confidence_calibration_diagram(probs, labels, eval_dir, n_bins = 10, title =
         bin_accs.append(np.mean(labels[idx] == preds[idx]))
         bin_counts.append(len(idx))
     
-    plt.figure()
+    plt.figure(figsize=(7, 5))
     plt.plot([0.5, 1.0], [0.5, 1.0], color = "gray", label = "Perfect Calibration")
 
     plt.plot(bin_confs, bin_accs, marker = "o", label = "Model", color = color)
 
     for x, y, n in zip(bin_confs, bin_accs, bin_counts):
-        plt.text(x, y + 0.04, f"{n}", fontsize = 8, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
+        plt.text(x, y + 0.04, f"{n}", fontsize = 11, ha = "center", va = "bottom", color = "black", path_effects = [pe.withStroke(linewidth = 2.5, foreground = "white")])
 
     plt.xticks(
         ticks = [0.5, 0.75, 1.0],
@@ -271,7 +271,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     wrong = probs[labels != preds]
     title_prefix_safe = title_prefix.replace(" ", "_")
 
-    plt.figure()
+    plt.figure(figsize=(7, 5))
     plt.hist(probs, bins = 20, label = "All Predictions", color = color)
     plt.xticks(
         ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
@@ -287,7 +287,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     figures.append(file_name_1)
     plt.close()
 
-    plt.figure()
+    plt.figure(figsize=(7, 5))
     plt.hist(wrong, bins = 20, color = color, label = "Wrong Predictions")
     plt.xticks(
         ticks = [0.0, 0.25, 0.5, 0.75, 1.0],
@@ -325,7 +325,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
         else:
             bin_accs.append(np.nan)
 
-    plt.figure()
+    plt.figure(figsize=(7, 5))
 
     # Total Predictions
     plt.hist(
@@ -365,7 +365,7 @@ def confidence_histograms(probs, labels, eval_dir, title_prefix = "Model", color
     plt.close()
 
     # Plot Accuracy per Bin
-    plt.figure()
+    plt.figure(figsize=(7, 5))
 
     perfect_acc = np.abs(bin_centers - 0.5) + 0.5
 
@@ -418,7 +418,7 @@ def metrics_table(eval_dir, headers, table_data):
     table = ax.table(cellText = table_data, colLabels = headers, loc = "center", cellLoc = "center")
 
     table.auto_set_font_size(False)
-    table.set_fontsize(10)
+    table.set_fontsize(12)
     table.scale(1.2, 1.8)
 
     for key, cell in table.get_celld().items():
@@ -650,7 +650,6 @@ def main():
         avg_accept, std_accept = mean_and_std("accept_rate")
         avg_reject, std_reject = mean_and_std("reject_rate")
         avg_m_conf, std_m_conf = mean_and_std("mean_conf")
-        avg_s_conf, std_s_conf = mean_and_std("std_conf")
         avg_ece, std_ece = mean_and_std("ece")
         avg_mce, std_mce = mean_and_std("mce")
         avg_accept, std_accept = mean_and_std("accept_rate")
@@ -687,7 +686,7 @@ def main():
         row = [
             name,
             rf"{avg_acc:.4f}" if avg_acc is not None else "N/A" + rf" \u00B1 {std_acc:.4f}" if std_acc is not None else "\u00B1 N/A",
-            rf"{avg_s_conf:.4f}" if avg_s_conf is not None else "N/A" + rf" \u00B1 {std_s_conf:.4f}" if std_s_conf is not None else "\u00B1 N/A",
+            rf"{avg_m_conf:.4f}" if avg_m_conf is not None else "N/A" + rf" \u00B1 {std_m_conf:.4f}" if std_m_conf is not None else "\u00B1 N/A",
             rf"{avg_s_conf:.4f}" if avg_s_conf is not None else "N/A" + rf" \u00B1 {std_s_conf:.4f}" if std_s_conf is not None else "\u00B1 N/A",
             rf"{avg_ece:.4f}" if avg_ece is not None else "N/A" + rf" \u00B1 {std_ece:.4f}" if std_ece is not None else "\u00B1 N/A",
             rf"{avg_mce:.4f}" if avg_mce is not None else "N/A" + rf" \u00B1 {std_mce:.4f}" if std_mce is not None else "\u00B1 N/A",
