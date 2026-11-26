@@ -83,7 +83,7 @@ Tests ensure that your environment is set up and functioning correctly
     ```bash
     python3 ./tests/full_loso.py
     ```
-  This can also be run with the flag `--recreate-graphs`. This will load data from `./data/full_loso/results.json` and recreate the graphs without re-training and re-evaluating the models.
+  This can also be run with the flag `--recreate-graphs`. This will load data from `./data/full_loso/results.json` and recreate the graphs without re-training and re-evaluating the models. Results saved to the repository can be visualized this way if the repo has been cloned without re-evaluating the models.
     ```bash
     python3 ./tests/full_loso.py --recreate-graphs
     ```
