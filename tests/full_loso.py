@@ -459,7 +459,7 @@ def main():
     if moved_files > 0:
         print(f"Moved {moved_files} files from figs/eval to figs/eval/previous.")
     
-    subjects = list(range(1, 3))
+    subjects = list(range(1, 10))
     model_names = ["CSP + LDA", "EEGNet", "BIOT", "BIOT (RS)", "BIOT (Pre-Trained, RS)", "AXON"]
     model_colors = ["tab:purple", "tab:blue", "tab:orange", "tab:green", "tab:red", "tab:brown"]
     
@@ -519,33 +519,33 @@ def main():
             csp_lda_model = CSP_LDA_Model(n_components = 4)
             csp_lda_model.fit(X_train, y_train)
             
-            # print("Training EEGNet model...")
-            # eegnet_model = EEGNet_Model(n_chans = n_chans, n_times = n_times)
-            # eegnet_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/eegnet", name = f"EEGNet Leave {test_subj}")
+            print("Training EEGNet model...")
+            eegnet_model = EEGNet_Model(n_chans = n_chans, n_times = n_times)
+            eegnet_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/eegnet", name = f"EEGNet Leave {test_subj}")
             
-            # print("Training BIOT model...")
-            # biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = False)
-            # biot_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot", name = f"BIOT Leave {test_subj}")
+            print("Training BIOT model...")
+            biot_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = False)
+            biot_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot", name = f"BIOT Leave {test_subj}")
 
-            # print("Training BIOT (RS) model...")
-            # biot_rs_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = True)
-            # biot_rs_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_rs", name = f"BIOT (RS) Leave {test_subj}")
+            print("Training BIOT (RS) model...")
+            biot_rs_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, resample = True)
+            biot_rs_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_rs", name = f"BIOT (RS) Leave {test_subj}")
 
-            # print("Training BIOT (Pre-Trained, RS) model...")
-            # biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
-            # biot_pretrained_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_pretrained_rs", name = f"BIOT (Pre-Trained, RS) Leave {test_subj}")
+            print("Training BIOT (Pre-Trained, RS) model...")
+            biot_pretrained_model = BIOT_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
+            biot_pretrained_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/biot_pretrained_rs", name = f"BIOT (Pre-Trained, RS) Leave {test_subj}")
 
-            # print("Training AXON model...")
-            # axon_model = AXON_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
-            # axon_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/axon", name = f"AXON Leave {test_subj}")
+            print("Training AXON model...")
+            axon_model = AXON_Model(ch_names = ch_names, n_chans = n_chans, n_times = n_times, n_classes = 2, frequency = sfreq, version = "pretrained", resample = True)
+            axon_model.fit(X_train, y_train, save_dir = f"{PROJECT_ROOT}/models/training_metrics/full_loso/axon", name = f"AXON Leave {test_subj}")
 
             for name, model in [
                     ("CSP + LDA", csp_lda_model),
-                    # ("EEGNet", eegnet_model),
-                    # ("BIOT", biot_model),
-                    # ("BIOT (RS)", biot_rs_model),
-                    # ("BIOT (Pre-Trained, RS)", biot_pretrained_model),
-                    # ("AXON", axon_model)
+                    ("EEGNet", eegnet_model),
+                    ("BIOT", biot_model),
+                    ("BIOT (RS)", biot_rs_model),
+                    ("BIOT (Pre-Trained, RS)", biot_pretrained_model),
+                    ("AXON", axon_model)
                 ]:
                 print(f"Evaluating model {name}...")
 
