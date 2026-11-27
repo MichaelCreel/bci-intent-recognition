@@ -411,7 +411,7 @@ def metrics_table(eval_dir, headers, table_data):
     num_rows = len(table_data)
     num_cols = len(headers)
 
-    fig, ax = plt.subplots(figsize=(max(12, num_cols * 1.2), num_rows * 0.8 + 1.8))
+    fig, ax = plt.subplots(figsize=(max(12, num_cols * 1.6), num_rows * 0.8 + 1.8))
     ax.axis("tight")
     ax.axis("off")
 
@@ -660,16 +660,28 @@ def main():
         avg_acc_above = np.mean(acc_above_vals) if len(acc_above_vals) > 0 else None
         emp_cov, avg_size = compute_split_conformal(all_probs, all_labels, alpha=conformal_alpha)
 
+        def create_metric_string(avg, std):
+            met_str = ""
+            if avg is not None:
+                met_str += f"{avg:.4f}"
+            else:
+                met_str += "N/A"
+            if std is not None:
+                met_str += f" \u00B1 {std:.4f}"
+            else:
+                met_str += " \u00B1 N/A"
+            return met_str
+
         print(f"=== {name} ===")
-        print(f"Accuracy: {avg_acc:.4f}" if avg_acc is not None else "N/A" + f" \u00B1 {std_acc:.4f}" if std_acc is not None else "\u00B1 N/A")
-        print(f"Mean Confidence: {avg_m_conf:.4f}" if avg_m_conf is not None else "N/A" + f" \u00B1 {std_m_conf:.4f}" if std_m_conf is not None else "\u00B1 N/A")
-        print(f"Std Confidence: {avg_s_conf:.4f}" if avg_s_conf is not None else "N/A" + f" \u00B1 {std_s_conf:.4f}" if std_s_conf is not None else "\u00B1 N/A")
-        print(f"Expected Calibration Error (ECE): {avg_ece:.4f}" if avg_ece is not None else "N/A" + f" \u00B1 {std_ece:.4f}" if std_ece is not None else "\u00B1 N/A")
-        print(f"Expected Calibration Error (ECE): {avg_ece:.4f}" if avg_ece is not None and std_ece is not None else "N/A \u00B1 N/A")
-        print(f"Maximum Calibration Error (MCE): {avg_mce:.4f}" if avg_mce is not None else "N/A" + f" \u00B1 {std_mce:.4f}" if std_mce is not None else "\u00B1 N/A")
+        print(f"Accuracy: {create_metric_string(avg_acc, std_acc)}")
+        print(f"Mean Confidence: {create_metric_string(avg_m_conf, std_m_conf)}")
+        print(f"Std Confidence: {create_metric_string(avg_s_conf, std_s_conf)}")
+        print(f"Expected Calibration Error (ECE): {create_metric_string(avg_ece, std_ece)}")
+        print(f"Expected Calibration Error (ECE): {create_metric_string(avg_ece, std_ece)}")
+        print(f"Maximum Calibration Error (MCE): {create_metric_string(avg_mce, std_mce)}")
         print(f"Safety Threshold: {threshold:.2f}")
-        print(f"Acceptance Rate: {avg_accept:.4f}" if avg_accept is not None else "N/A" + f" \u00B1 {std_accept:.4f}" if std_accept is not None else "\u00B1 N/A")
-        print(f"Reject Rate: {avg_reject:.4f}" if avg_reject is not None else "N/A" + f" \u00B1 {std_reject:.4f}" if std_reject is not None else "\u00B1 N/A")
+        print(f"Acceptance Rate: {create_metric_string(avg_accept, std_accept)}")
+        print(f"Reject Rate: {create_metric_string(avg_reject, std_reject)}")
         print(f"Empirical Coverage: {emp_cov:.4f}" if emp_cov is not None else "N/A")
         print(f"Average Set Size: {avg_size:.4f}" if avg_size is not None else "N/A")
         if avg_auroc is None:
@@ -685,14 +697,14 @@ def main():
 
         row = [
             name,
-            rf"{avg_acc:.4f}" if avg_acc is not None else "N/A" + rf" \u00B1 {std_acc:.4f}" if std_acc is not None else "\u00B1 N/A",
-            rf"{avg_m_conf:.4f}" if avg_m_conf is not None else "N/A" + rf" \u00B1 {std_m_conf:.4f}" if std_m_conf is not None else "\u00B1 N/A",
-            rf"{avg_s_conf:.4f}" if avg_s_conf is not None else "N/A" + rf" \u00B1 {std_s_conf:.4f}" if std_s_conf is not None else "\u00B1 N/A",
-            rf"{avg_ece:.4f}" if avg_ece is not None else "N/A" + rf" \u00B1 {std_ece:.4f}" if std_ece is not None else "\u00B1 N/A",
-            rf"{avg_mce:.4f}" if avg_mce is not None else "N/A" + rf" \u00B1 {std_mce:.4f}" if std_mce is not None else "\u00B1 N/A",
+            rf"{create_metric_string(avg_acc, std_acc)}",
+            rf"{create_metric_string(avg_m_conf, std_m_conf)}",
+            rf"{create_metric_string(avg_s_conf, std_s_conf)}",
+            rf"{create_metric_string(avg_ece, std_ece)}",
+            rf"{create_metric_string(avg_mce, std_mce)}",
             f"{avg_acc_above:.4f}" if avg_acc_above is not None else "N/A",
-            rf"{avg_accept:.4f}" if avg_accept is not None else "N/A" + rf" \u00B1 {std_accept:.4f}" if std_accept is not None else "\u00B1 N/A", # Acceptance rate is threshold coverage
-            rf"{avg_reject:.4f}" if avg_reject is not None else "N/A" + rf" \u00B1 {std_reject:.4f}" if std_reject is not None else "\u00B1 N/A", # Reject rate is lost coverage from threshold
+            rf"{create_metric_string(avg_accept, std_accept)}", # Acceptance rate is threshold coverage
+            rf"{create_metric_string(avg_reject, std_reject)}", # Reject rate is lost coverage from threshold
             f"{emp_cov:.4f}" if emp_cov is not None else "N/A",
             f"{avg_size:.4f}" if avg_size is not None else "N/A",
             f"{avg_auroc:.4f}" if avg_auroc is not None else "N/A"
